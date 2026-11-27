@@ -110,7 +110,7 @@ export function CarmillaSite() {
 
       {/* portada */}
       <section className="relative overflow-hidden">
-        <img src="/images/sites/carmilla.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+        <img src="./images/sites/carmilla.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#12051c]/75 via-[#12051c]/55 to-[#12051c]" />
         <div className="relative max-w-4xl mx-auto px-5 pt-16 pb-24 text-center">
           <p className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-[#ff8a3d]/50 bg-[#12051c]/60 px-4 py-1.5 text-sm text-[#ffd2b0]">

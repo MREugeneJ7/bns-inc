@@ -205,7 +205,7 @@ export default function LandingPage({ onApply }: { onApply: () => void }) {
               <div className="border border-line bg-paper-light">
                 <div className="relative aspect-[5/4] overflow-hidden bg-paper-deep sm:aspect-[16/10] lg:aspect-[5/4]">
                   <img
-                    src="/images/office.jpg"
+                    src="./images/office.jpg"
                     alt="Oficina de Deskjockey for Life, luminosa y sin personal"
                     className="h-full w-full object-cover"
                   />
@@ -449,7 +449,7 @@ export default function LandingPage({ onApply }: { onApply: () => void }) {
             <div>
               <div className="relative aspect-[4/5] overflow-hidden bg-paper/10 sm:aspect-[5/4] lg:aspect-[4/5]">
                 <img
-                  src="/images/ceo.jpg"
+                  src="./images/ceo.jpg"
                   alt="Aurelio Benavente, fundador y consejero delegado de Deskjockey for Life"
                   className="h-full w-full object-cover grayscale-[18%]"
                 />

@@ -149,7 +149,7 @@ export function Hero() {
       {/* BG */}
       <div className="absolute inset-0">
         <img
-          src="/images/capilla-nocturna.jpg"
+          src="./images/capilla-nocturna.jpg"
           alt="Capilla nocturna"
           className="w-full h-full object-cover opacity-60"
         />
@@ -265,7 +265,7 @@ export function Hero() {
         >
           <div className="card-border rounded-3xl overflow-hidden backdrop-blur">
             <div className="relative h-72 overflow-hidden">
-              <img src="/images/carlisle-portrait.jpg" alt="Dr. Carlisle Cullen" className="w-full h-full object-cover object-top" />
+              <img src="./images/carlisle-portrait.jpg" alt="Dr. Carlisle Cullen" className="w-full h-full object-cover object-top" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#101014] via-transparent to-transparent" />
               <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-[#c9a86a]/30 text-[10px] tracking-[0.2em] uppercase text-[#ecd9ab]">
                 <ShieldCheck size={12} /> Ex-vampiro colegiado nº 1663

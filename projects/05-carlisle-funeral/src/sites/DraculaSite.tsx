@@ -211,7 +211,7 @@ export function DraculaSite() {
           <figure>
             <div className="border border-[#a8853f] p-2 bg-[#fbf8f1]">
               <img
-                src="/images/sites/dracula.jpg"
+                src="./images/sites/dracula.jpg"
                 alt="Despacho de la correduría: escritorio con expedientes lacrados, archivadores y cortinas de terciopelo echadas"
                 className="w-full aspect-[4/5] object-cover bg-[#2a1215]"
               />

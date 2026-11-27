@@ -188,7 +188,7 @@ export function StrahdSite() {
           <figure className="mx-auto w-full max-w-sm">
             <div className="rounded-t-full border border-[#d9b676]/60 p-2">
               <img
-                src="/images/sites/strahd.jpg"
+                src="./images/sites/strahd.jpg"
                 alt="Escritorio del autor: pluma, tintero, una pila de manuscritos, una rosa y una copa, con la niebla al otro lado del ventanal"
                 className="w-full aspect-[3/4] rounded-t-full object-cover bg-[#200c15]"
               />

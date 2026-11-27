@@ -180,7 +180,7 @@ export function BarlowSite() {
 
           <figure className="relative">
             <img
-              src="/images/sites/barlow.jpg"
+              src="./images/sites/barlow.jpg"
               alt="Aula con camitas para la siesta, mesa de bloques, un murciélago de peluche y las cortinas opacas echadas"
               className="w-full aspect-[4/3] object-cover bg-[#ffe59a] rounded-[40px] border-2 border-[#2b2d42] shadow-[6px_6px_0_#2b2d42]"
             />

@@ -221,7 +221,7 @@ export function Configurador() {
           <div className="lg:sticky lg:top-32">
             <div className="rounded-3xl overflow-hidden border border-[#c9a86a]/30 bg-gradient-to-b from-[#1a1812] to-[#0d0d11]">
               <div className="relative h-40 overflow-hidden">
-                <img src="/images/ataud-detalle.jpg" alt="Detalle" className="w-full h-full object-cover opacity-80" />
+                <img src="./images/ataud-detalle.jpg" alt="Detalle" className="w-full h-full object-cover opacity-80" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d11] to-transparent" />
                 <div className="absolute bottom-3 left-5 flex items-center gap-2 text-[#ecd9ab] text-[11px] tracking-[0.25em] uppercase">
                   <ReceiptText size={14} /> Tu presupuesto

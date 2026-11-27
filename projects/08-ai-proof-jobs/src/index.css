@@ -54,7 +54,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, textarea:focus-vis
   align-items: center;
   min-height: calc(100svh - 72px);
   background-color: #111c15;
-  background-image: linear-gradient(90deg, rgba(6, 12, 8, .96) 0%, rgba(6, 12, 8, .88) 29%, rgba(6, 12, 8, .45) 57%, rgba(6, 12, 8, .12) 100%), url('/images/oraculo-oficina.jpg');
+  background-image: linear-gradient(90deg, rgba(6, 12, 8, .96) 0%, rgba(6, 12, 8, .88) 29%, rgba(6, 12, 8, .45) 57%, rgba(6, 12, 8, .12) 100%), url('./images/oraculo-oficina.jpg');
   background-size: cover;
   background-position: center;
   overflow: hidden;
@@ -258,7 +258,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, textarea:focus-vis
 
 @media (max-width: 800px) {
   .topbar-center { display: none; }
-  .hero { background-position: 61% center; background-image: linear-gradient(90deg, rgba(6, 12, 8, .97), rgba(6, 12, 8, .78) 50%, rgba(6, 12, 8, .42)), url('/images/oraculo-oficina.jpg'); }
+  .hero { background-position: 61% center; background-image: linear-gradient(90deg, rgba(6, 12, 8, .97), rgba(6, 12, 8, .78) 50%, rgba(6, 12, 8, .42)), url('./images/oraculo-oficina.jpg'); }
   .quiz-layout { grid-template-columns: 1fr; gap: 35px; margin-top: 43px; }
   .sidebar-title { margin-bottom: 12px; }
   .module-list { display: flex; gap: 0; overflow-x: auto; border-left: 0; border-bottom: 1px solid #344038; scrollbar-width: thin; scrollbar-color: #526c58 transparent; }
