@@ -1,0 +1,90 @@
+.save-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(10, 18, 10, .85);
+  font-family: 'Press Start 2P', monospace;
+  color: #0f380f;
+}
+.save-window {
+  width: min(100%, 480px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #9bbc0f;
+  border: 5px double #0f380f;
+  box-shadow: 0 8px 30px #0009;
+}
+.save-top, .save-tabs, .save-actions, .preset-tools, .paste-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.save-top {
+  justify-content: space-between;
+  padding: 12px;
+  background: #0f380f;
+  color: #9bbc0f;
+  font-size: 8px;
+}
+.save-top span, .save-tabs button, .save-actions button, .save-focus, .upload-save, .restore-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.save-top button, .save-window button { cursor: pointer; }
+.save-window :focus-visible { outline: 3px solid #306230; outline-offset: 2px; }
+.save-body { padding: 14px; }
+.save-body h2 { margin: 2px 0 9px; font-size: 15px; line-height: 1.5; }
+.save-body h3 { margin: 12px 0 8px; font-size: 9px; line-height: 1.6; }
+.save-body p { margin: 6px 0 12px; font-size: 8px; line-height: 1.7; }
+.save-sub { color: #306230; }
+.save-tabs { margin: 12px 0; border-bottom: 2px solid #0f380f; }
+.save-tabs button, .save-actions button, .save-focus, .upload-save, .paste-save button,
+.preset-list button, .restore-save {
+  border: 2px solid #0f380f;
+  background: #8bac0f;
+  color: #0f380f;
+  padding: 8px;
+  font: inherit;
+  font-size: 8px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.save-tabs button { flex: 1; justify-content: center; }
+.save-tabs button.on, .save-focus { background: #0f380f; color: #9bbc0f; }
+.save-actions { flex-wrap: wrap; }
+.save-actions svg, .save-tabs svg, .restore-save svg { width: 14px; height: 14px; flex-shrink: 0; }
+.save-divider { border-top: 2px solid #306230; margin: 16px 0; }
+.upload-save { width: 100%; justify-content: flex-start; }
+.upload-save svg:last-child { margin-left: auto; }
+.paste-save { margin-top: 8px; }
+.paste-save input, .preset-tools input, .preset-tools select {
+  min-width: 0;
+  border: 2px solid #0f380f;
+  background: #b4cf59;
+  color: #0f380f;
+  padding: 8px;
+  font: 8px/1.5 'Press Start 2P', monospace;
+}
+.paste-save input { flex: 1; }
+.paste-save input::placeholder, .preset-tools input::placeholder { color: #306230; }
+.paste-save button:disabled { opacity: .55; cursor: default; }
+.restore-save { margin-top: 12px; }
+.preset-tools label { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1; }
+.preset-tools input { width: 100%; }
+.preset-tools select { max-width: 46%; }
+.save-body .save-tip { font-size: 7px; }
+.preset-list { max-height: 38vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.preset-list button { display: flex; justify-content: space-between; gap: 6px; text-align: left; }
+.preset-list strong, .preset-list small { display: block; line-height: 1.6; }
+.preset-list small { margin-top: 4px; font-size: 6px; color: #306230; }
+.save-error { margin-top: 12px; padding: 10px; border: 2px solid #0f380f; font-size: 8px; line-height: 1.6; }
+@media (max-width: 480px) {
+  .save-body { padding: 10px; }
+  .preset-list { grid-template-columns: 1fr; }
+  .save-window { max-height: 94vh; }
+}

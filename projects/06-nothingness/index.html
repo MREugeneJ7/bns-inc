@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nada.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        html, body {
+            margin: 0;
+            background: #000;
+            color: #d4d4d4;
+        }
+        body {
+            font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+            -webkit-font-smoothing: antialiased;
+        }
+        ::selection { background: #2c2c2c; }
+
+        .wrap {
+            max-width: 46rem;
+            margin: 0 auto;
+            padding: 5.5rem 1.5rem 40vh;
+        }
+        .ln {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.75;
+            font-size: .9rem;
+        }
+        .ln.start { margin-top: 1.6rem; }
+
+        /* syntax */
+        .c { color: #666; }
+        .s { color: #c9b98a; }
+        .n { color: #9fb7c9; }
+        .k { color: #ececec; font-weight: 600; }
+        .pr { color: #555; }
+
+        .out { color: #f2f2f2; }
+        .err { color: #d98c88; }
+
+        .verdict {
+            color: #8d8d8d;
+            font-style: italic;
+            opacity: 0;
+            transition: opacity .6s ease;
+        }
+        .verdict.on { opacity: 1; }
+        .em .c { color: #c4c4c4; }
+
+        .caret {
+            display: inline-block;
+            width: .55em;
+            height: 1.05em;
+            background: #ececec;
+            vertical-align: -.15em;
+            margin-left: 1px;
+            animation: blink 1s steps(1) infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .flash { animation: flash .7s ease-out; }
+        @keyframes flash { from { color: #fff; } to { color: #a3a3a3; } }
+
+        header { transition: opacity .9s ease; background: linear-gradient(#000 55%, transparent); }
+
+        /* ritmo: lo único que cambia la velocidad. tocar el resto de la página no hace nada. */
+        /* pausa: el cursor deja de parpadear. sin más señales en pantalla. */
+        html.paused .caret { animation: none; }
+
+        /* la pregunta, flotando sobre el ruido */
+        .float-q {
+            position: fixed; z-index: 999; left: 50%; top: 32%;
+            color: #fff;
+            text-shadow: 0 0 14px rgba(0,0,0,.85), 0 2px 10px rgba(0,0,0,.7);
+            font: 400 clamp(1.4rem, 3.6vw, 2.9rem)/1.25 ui-monospace, 'SF Mono', Menlo, monospace;
+            text-align: center; pointer-events: none; user-select: none;
+            animation: drift 19s ease-in-out infinite alternate;
+        }
+        .float-q .q-main { margin: 0; }
+        .float-q .q-sub { margin: .9rem 0 0; font-size: .42em; opacity: .72; }
+        @keyframes drift {
+            0%   { transform: translate(-52%, -50%) rotate(-1.4deg); }
+            33%  { transform: translate(-45%, -58%) rotate(1.6deg); }
+            66%  { transform: translate(-56%, -42%) rotate(-.5deg); }
+            100% { transform: translate(-48%, -55%) rotate(1deg); }
+        }
+        .selfie {
+            position: fixed; right: 3vw; bottom: 4vh; z-index: 58; width: 168px; aspect-ratio: 4/3;
+            border: 1px solid rgba(255,255,255,.45); overflow: hidden; background: #000;
+            mix-blend-mode: difference; animation: appear .7s ease both;
+        }
+        .selfie video { width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleX(-1); }
+        @keyframes appear { from { opacity: 0; transform: translateY(14px) scale(.94); } to { opacity: 1; transform: none; } }
+
+
+        /* fin, sobre las caras, sin volver al todo */
+        .fin-word {
+            position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+            color: #fff; mix-blend-mode: difference; pointer-events: none; text-align: center;
+            font: 300 clamp(1.6rem, 4.5vw, 4rem)/1.2 ui-monospace, Menlo, monospace;
+            letter-spacing: -.02em; opacity: 0; transition: opacity 1s ease;
+        }
+
+        /* el viaje: solo gráficos, sin texto */
+        .journey { position: fixed; inset: 0; z-index: 44; display: block; background: #000; }
+
+        /* la farmacia de su calle */
+        .street {
+            position: fixed; inset: 0; z-index: 52; overflow: hidden; background: #04060a;
+            opacity: 0; transition: opacity 1.8s ease;
+        }
+        .street.on { opacity: 1; }
+        .st-sky { position: absolute; inset: 0 0 40% 0; background: linear-gradient(#04060b,#0a1120 60%,#16223a); }
+        .st-sky::after {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(60% 46% at 80% 16%, rgba(190,215,255,.11), transparent 70%);
+        }
+        .st-far {
+            position: absolute; left: 0; right: 0; bottom: 38%; height: 32%;
+            background: repeating-linear-gradient(90deg,#080d16 0 76px,#0b1220 76px 152px);
+            -webkit-mask-image: linear-gradient(#000, transparent);
+            mask-image: linear-gradient(#000, transparent);
+        }
+        .st-far::after {
+            content: ""; position: absolute; inset: 0; opacity: .7;
+            background: repeating-linear-gradient(90deg, transparent 0 13px, rgba(255,225,170,.055) 13px 17px, transparent 17px 76px);
+        }
+        .st-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 40%; background: linear-gradient(#141d2b,#070a11); }
+        .st-ground::after {
+            content: ""; position: absolute; inset: 0;
+            background:
+                radial-gradient(48% 62% at 50% 0, rgba(57,232,120,.15), transparent 70%),
+                radial-gradient(26% 38% at 14% 0, rgba(255,220,160,.12), transparent 70%);
+        }
+        .pharm { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); width: min(54vw, 430px); aspect-ratio: 1/1.04; }
+        .ph-facade { position: absolute; inset: 0; background: linear-gradient(#1b2534,#111926); border-top: 1px solid #2a3646; }
+        .ph-sign {
+            position: absolute; left: 4%; right: 4%; top: 5%; height: 25%;
+            background: #0b1118; border: 1px solid #22303f;
+            display: flex; align-items: center; justify-content: center; gap: clamp(8px,1.8vw,15px);
+        }
+        .ph-name {
+            font: 600 clamp(10px,2.3vw,16px)/1 ui-monospace, Menlo, monospace;
+            letter-spacing: .32em; text-transform: uppercase; color: #cfe4d6;
+        }
+        .cross { position: relative; width: clamp(15px,3.2vw,25px); aspect-ratio: 1; flex: none; animation: neon 5.6s steps(1,end) infinite; }
+        .cross i { position: absolute; background: #39e878; box-shadow: 0 0 14px 3px rgba(57,232,120,.75); }
+        .cross i:first-child { left: 36%; right: 36%; top: 0; bottom: 0; }
+        .cross i:last-child { top: 36%; bottom: 36%; left: 0; right: 0; }
+        @keyframes neon {
+            0%,100% { opacity: 1; } 38% { opacity: 1; } 39% { opacity: .3; } 41% { opacity: 1; }
+            68% { opacity: 1; } 69% { opacity: .5; } 70% { opacity: 1; }
+        }
+        .ph-win {
+            position: absolute; left: 9%; right: 9%; top: 34%; height: 35%;
+            background: linear-gradient(#2d3b4f,#1b2634); border: 1px solid #2f3f52;
+            box-shadow: inset 0 0 34px rgba(255,226,170,.14);
+        }
+        .ph-win::after {
+            content: ""; position: absolute; inset: 14% 9%;
+            background: linear-gradient(180deg, rgba(255,226,170,.15), rgba(255,226,170,.03));
+            border-left: 1px solid rgba(255,255,255,.05); border-right: 1px solid rgba(255,255,255,.05);
+        }
+        .ph-door { position: absolute; left: 39%; right: 39%; top: 73%; bottom: 0; background: #0a0f16; border: 1px solid #22303f; }
+        .st-lamp { position: absolute; left: 9%; bottom: 40%; width: 2px; height: 28vh; background: #2b3a4c; }
+        .st-lamp::before { content: ""; position: absolute; left: -16px; top: -7px; width: 34px; height: 8px; background: #33465c; border-radius: 2px; }
+        .st-lamp::after {
+            content: ""; position: absolute; left: -84px; top: 0; width: 170px; height: 40vh;
+            background: linear-gradient(180deg, rgba(255,226,170,.15), transparent 76%);
+            clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+        }
+        .st-quote {
+            position: absolute; left: 0; right: 0; bottom: 6%; padding: 0 clamp(18px,7vw,86px);
+            text-align: center; color: #e2e8f0; opacity: 0; transition: opacity 2.2s ease;
+        }
+        .st-quote.on { opacity: 1; }
+        .st-quote p { margin: 0; font: 300 clamp(.95rem,2.5vw,1.3rem)/1.55 ui-monospace, Menlo, monospace; }
+        .st-quote .en { margin-top: .85rem; font-size: .74em; color: #8b98a8; }
+        .st-quote .src { margin-top: 1.3rem; font-size: .62em; letter-spacing: .3em; text-transform: uppercase; color: #5d6a79; }
+        .st-quote .restart { margin-top: 1.6rem; display: inline-block; }
+
+        .prompt {
+            display: flex;
+            gap: .6rem;
+            align-items: center;
+            margin-top: .6rem;
+        }
+        .prompt input {
+            flex: 1;
+            min-width: 0;
+            background: transparent;
+            border: 0;
+            outline: 0;
+            color: #f2f2f2;
+            font: inherit;
+            caret-color: #ececec;
+        }
+        .prompt input::placeholder { color: #767676; opacity: 1; }
+        /* táctil: campo más alto y de 16px, para que iOS no amplíe la página al enfocarlo */
+        @media (pointer: coarse) {
+            .ln.prompt { font-size: 1rem; }
+            .prompt input { min-height: 2.75rem; }
+        }
+        .restart {
+            margin-top: 2.5rem;
+            background: none;
+            border: 0;
+            color: #555;
+            font: inherit;
+            font-size: .75rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        .restart:hover { color: #aaa; }
+
+        /* fase C: los algos */
+        #algos { position: fixed; inset: 0; display: block; z-index: 1; }
+        #algos-count {
+            position: fixed; top: 1rem; right: 1.5rem; z-index: 2;
+            font-size: .75rem; color: #777; mix-blend-mode: difference;
+            pointer-events: none; user-select: none;
+        }
+        #todo {
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: #fff; color: #000; font-size: clamp(3rem, 14vw, 12rem); font-weight: 600;
+            letter-spacing: -.04em; opacity: 0; transition: opacity 1.2s ease;
+        }
+
+        /* fase D: el todo es blanco */
+        html.todo, html.todo body { background: #fff; color: #2a2a2a; }
+        html.todo ::selection { background: #e2e2e2; }
+        html.todo .c { color: #8a8a8a; }
+        html.todo .s { color: #6e5d2c; }
+        html.todo .n { color: #2e5a7a; }
+        html.todo .k { color: #111; }
+        html.todo .pr { color: #aaa; }
+        html.todo .out { color: #000; }
+        html.todo .err { color: #a3302a; }
+        html.todo .verdict { color: #666; }
+        html.todo .em .c { color: #222; }
+        html.todo .caret { background: #111; }
+        html.todo .prompt input { color: #000; caret-color: #111; }
+        html.todo .restart { color: #999; }
+        html.todo .restart:hover { color: #333; }
+        html.todo .flash { animation: none; }
+
+        /* Una relacion dirigida, no dos extremos equivalentes. */
+        .perspective {
+            margin: 2.5rem 0 2rem;
+            border-top: 1px solid #d5d5d5;
+            border-bottom: 1px solid #d5d5d5;
+            padding: 1.25rem 0 1.5rem;
+        }
+        .perspective-nav { display: flex; gap: 1.5rem; margin-bottom: 1rem; }
+        .perspective-nav button {
+            border: 0; border-bottom: 1px solid transparent; padding: .3rem 0;
+            background: transparent; color: #888; font: inherit; font-size: .8rem;
+            cursor: pointer;
+        }
+        .perspective-nav button[aria-pressed="true"] { border-color: #111; color: #111; }
+        .perspective-stage {
+            position: relative; height: clamp(12rem, 28vw, 16rem); overflow: hidden;
+            border: 1px solid #bcbcbc; background: #fff;
+            transition: background .7s ease, border-color .7s ease;
+        }
+        .perspective-stage .absence {
+            position: absolute; top: 50%; left: 50%; width: 5rem; height: 5rem;
+            border-radius: 50%; background: #000; transform: translate(-50%, -50%);
+            transition: width .8s ease, height .8s ease, border-radius .8s ease;
+        }
+        .perspective-stage.from-nada { border-color: #000; background: #000; }
+        .perspective-stage.from-nada .absence { width: 150%; height: 200%; border-radius: 0; }
+        .perspective-stage .stage-label {
+            position: absolute; z-index: 1; bottom: 1rem; left: 1rem;
+            font-size: .75rem; color: #555; transition: color .7s ease;
+        }
+        .perspective-stage.from-nada .stage-label { color: #aaa; }
+        .perspective-result { min-height: 3.8rem; margin-top: 1rem; font-size: .8rem; line-height: 1.7; color: #444; }
+        .perspective-result strong { font-weight: 600; color: #111; }
+        @media (prefers-reduced-motion: reduce) {
+            .perspective-stage, .perspective-stage .absence, .perspective-stage .stage-label { transition: none; }
+        }
+    </style>
+</head>
+<body>
+    <header data-hdr class="fixed top-0 inset-x-0 z-10 flex items-center justify-between px-6 py-4 text-xs text-neutral-500 select-none">
+        <span>nada.js</span>
+        <span>residuo: <b data-res class="font-normal text-neutral-300">0 bytes</b></span>
+    </header>
+
+    <main data-log class="wrap"></main>
+
+
+
+    <noscript><p style="padding:2rem">Sin JavaScript no hay nada. Literalmente.</p></noscript>
+
+    <script>
+    (() => {
+        const q = s => document.querySelector(s);
+        const enc = new TextEncoder();
+        const bytes = s => enc.encode(s).length;
+        const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // el HTML exacto de carga, sin el script: a esto vuelve la página al terminar
+        const BOOT = (() => {
+            const t = document.createElement('template');
+            t.innerHTML = document.body.innerHTML;
+            t.content.querySelectorAll('script').forEach(s => s.remove());
+            return { body: t.innerHTML, residue: '0 bytes' };
+        })();
+        let dead = false, genStop = null, epoch = 0;   // epoch = cuántas nadas han acabado ya
+        let log = q('[data-log]');
+        let hdr = q('[data-hdr]');
+        let resEl = q('[data-res]');
+        let perspectiveCleanup = null;
+        function bindRefs() { log = q('[data-log]'); hdr = q('[data-hdr]'); resEl = q('[data-res]'); }
+
+        function dismissPerspective() {
+            if (perspectiveCleanup) perspectiveCleanup();
+            perspectiveCleanup = null;
+            const wasFollowing = follow;
+            document.querySelectorAll('.perspective').forEach(el => el.remove());
+            // Quitar el recuadro cambia la altura y el navegador recorta scrollY.
+            // Sin esto, el handler de scroll lo lee como "el lector subió" y deja de seguir.
+            lastY = scrollY;
+            if (wasFollowing) {
+                follow = true;
+                window.scrollTo(0, document.documentElement.scrollHeight);
+                lastY = scrollY;
+            }
+        }
+
+        let residue = 0, phase = 'A', anchor = null;
+
+        const realSleep = ms => new Promise(r => setTimeout(r, ms));
+
+        /* ---------- seguir el texto ---------- */
+        // Solo mientras el lector está al final: si sube a releer, no se le arrastra de vuelta.
+        let follow = true, lastY = 0;
+        addEventListener('scroll', () => {
+            const y = scrollY;
+            const gap = document.documentElement.scrollHeight - innerHeight - y;
+            if (y < lastY - 1 && gap > 24) follow = false;                                  // el lector sube
+            // el .wrap lleva 40vh de relleno: con el prompt visible el hueco aún es grande
+            else if (y > lastY && gap < Math.max(200, innerHeight * 0.6)) follow = true;    // vuelve al final
+            lastY = y;
+        }, { passive: true });
+        const scroll = () => { if (follow) window.scrollTo(0, document.documentElement.scrollHeight); };
+
+        /* ---------- pantalla encendida mientras la página escribe sola ---------- */
+        const PAUSE_AWAKE = 5 * 60e3;   // en pausa, como mucho 5 minutos
+        const END_AWAKE = 2 * 60e3;     // al terminar, 2 minutos para leer el final
+        let lock = null, asking = false, wantAwake = false, awakeTimer = 0;
+        const held = () => !!lock && !lock.released;
+
+        function showAwake() {}   // sin texto: la pantalla se nota encendida sola
+
+        async function keepAwake() {
+            if (!wantAwake || held() || asking || document.visibilityState !== 'visible') return;
+            if (navigator.wakeLock) {
+                asking = true;
+                try {
+                    const l = await navigator.wakeLock.request('screen');
+                    l.addEventListener('release', () => { if (lock === l) lock = null; showAwake(); });
+                    lock = l;
+                    if (!wantAwake) l.release().catch(() => {});
+                } catch {
+                    // denegado: ahorro de batería, o el marco que incrusta la página no da permiso
+                }
+                asking = false;
+            }
+            showAwake();
+        }
+
+        function awakeFor(ms) {         // sin argumento: sin límite
+            clearTimeout(awakeTimer);
+            wantAwake = true;
+            keepAwake();
+            if (ms) awakeTimer = setTimeout(() => {
+                wantAwake = false;
+                if (held()) lock.release().catch(() => {}); else showAwake();
+            }, ms);
+        }
+
+        // El navegador suelta el bloqueo al ocultar la pestaña, y algunos solo lo conceden tras un gesto.
+        document.addEventListener('visibilitychange', keepAwake);
+        addEventListener('pointerdown', keepAwake);
+        addEventListener('keydown', keepAwake);
+
+        /* ---------- ritmo: gestos ocultos, sin botones ni texto ----------
+           doble toque (fuera de la consola) → pausa / seguir
+           dos dedos a la vez               → velocidad 1× → 2× → 4× → 1×   */
+        let rate = 1, paused = false;
+        const waiting = [];
+        async function sleep(ms) {
+            if (dead) return new Promise(() => {});   // la cadena anterior se queda colgada para siempre
+            await realSleep(ms / rate);
+            while (paused) await new Promise(r => waiting.push(r));
+        }
+
+        function setPaused(on) {
+            paused = on;
+            document.documentElement.classList.toggle('paused', on);
+            if (on) return awakeFor(PAUSE_AWAKE);
+            awakeFor();
+            follow = true;
+            scroll();
+            waiting.splice(0).forEach(r => r());
+        }
+
+        const touches = new Map();
+        let lastTap = { t: 0, x: 0, y: 0 }, lastPinch = 0;
+        const ignore = el => el.closest && el.closest('input, textarea, button, a, summary');
+        addEventListener('pointerdown', e => {
+            if (ignore(e.target)) return;
+            touches.set(e.pointerId, true);
+            const now = performance.now();
+            if (touches.size >= 2) {
+                if (now - lastPinch > 400) {          // dos dedos que caen juntos cuentan una vez
+                    rate = rate === 1 ? 2 : rate === 2 ? 4 : 1;
+                    lastPinch = now;
+                }
+                lastTap.t = 0;
+                return;
+            }
+            const near = Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40;
+            if (now - lastTap.t < 320 && near) {
+                lastTap.t = 0;
+                setPaused(!paused);
+            } else {
+                lastTap = { t: now, x: e.clientX, y: e.clientY };
+            }
+        });
+        const release = e => touches.delete(e.pointerId);
+        addEventListener('pointerup', release);
+        addEventListener('pointercancel', release);
+
+        awakeFor();
+
+        /* ---------- resaltado de sintaxis mínimo ---------- */
+        const KW = /^(const|let|var|for|if|return|new|void|typeof|true|false|null|undefined)$/;
+        function hl(s) {
+            const re = /(\/\/.*$)|('(?:[^'\\]|\\.)*'?|"(?:[^"\\]|\\.)*"?|`(?:[^`\\]|\\.)*`?)|(\b\d[\d._]*(?:e\d+)?\b)|([A-Za-z_$][\w$]*)/g;
+            let out = '', last = 0, m;
+            while ((m = re.exec(s))) {
+                out += esc(s.slice(last, m.index));
+                if (m[1]) out += '<span class="c">' + esc(m[1]) + '</span>';
+                else if (m[2]) out += '<span class="s">' + esc(m[2]) + '</span>';
+                else if (m[3]) out += '<span class="n">' + esc(m[3]) + '</span>';
+                else if (KW.test(m[4])) out += '<span class="k">' + esc(m[4]) + '</span>';
+                else out += esc(m[4]);
+                last = re.lastIndex;
+            }
+            return out + esc(s.slice(last));
+        }
+
+        function fmt(v) {
+            if (typeof v === 'number') return String(v);
+            if (typeof v === 'string') return JSON.stringify(v);
+            if (v === undefined) return 'undefined';
+            if (typeof v === 'function' || typeof v === 'symbol' || typeof v === 'bigint') return String(v).slice(0, 200);
+            try {
+                const s = JSON.stringify(v);
+                return s === undefined ? String(v) : s.slice(0, 300);
+            } catch { return String(v); }
+        }
+
+        /* ---------- contador de residuo ---------- */
+        function addResidue(n) {
+            residue += n;
+            resEl.textContent = residue + ' bytes';
+            resEl.classList.remove('flash');
+            void resEl.offsetWidth;
+            resEl.classList.add('flash');
+        }
+
+        /* ---------- primitivas de escritura ---------- */
+        function line(cls = '') {
+            const d = document.createElement('div');
+            d.className = 'ln ' + cls;
+            if (dead) return d;                     // tras el reset, nada escribe en ningún sitio
+            log.insertBefore(d, anchor);
+            scroll();
+            return d;
+        }
+
+        async function typeInto(el, text, speed = 16, prefix = '') {
+            for (let i = 1; i <= text.length; i++) {
+                el.innerHTML = prefix + hl(text.slice(0, i)) + '<span class="caret"></span>';
+                await sleep(text[i - 1] === ' ' ? speed * .4 : speed * (.6 + Math.random() * .8));
+            }
+            el.innerHTML = prefix + hl(text);
+        }
+
+        async function typeLine(text, cls = '', speed, prefix = '') {
+            const el = line(cls);
+            await typeInto(el, text, speed, prefix);
+            if (phase === 'A') addResidue(bytes(text));
+            return el;
+        }
+
+        async function say(text, wait = 600) {
+            const el = line('verdict');
+            el.textContent = '// ' + text;
+            if (phase === 'A') addResidue(bytes(text) + 3);
+            await sleep(30);
+            el.classList.add('on');
+            await sleep(wait);
+            return el;
+        }
+
+        function out(txt, isErr) {
+            const el = line(isErr ? 'out err' : 'out');
+            el.innerHTML = (isErr ? '' : '<span class="pr">← </span>') + esc(txt);
+            if (phase === 'A') addResidue(bytes(txt));
+        }
+
+        /* ---------- ejecución real del código mostrado ---------- */
+        function exec(code, probe) {
+            const src = probe ? code + '\nreturn (' + probe + ');' : code;
+            try { return { value: new Function(src)() }; }
+            catch (e) { return { error: e }; }
+        }
+
+        const steps = [
+            {
+                c: 'intento 1 · la ausencia de valor',
+                code: ['const nada = undefined;'],
+                probe: 'typeof nada',
+                v: () => 'tiene nombre y tiene tipo. undefined es un valor: no es la falta de valor.'
+            },
+            {
+                c: 'intento 2 · la ausencia a propósito',
+                code: ['const nada = null;'],
+                probe: 'typeof nada',
+                v: () => 'una ausencia intencional sigue siendo una intención. y el lenguaje la clasifica como "object".'
+            },
+            {
+                c: 'intento 3 · lo que no es un número',
+                code: ['const nada = NaN;'],
+                probe: 'typeof nada',
+                v: () => 'Not-a-Number es de tipo number. negar algo es seguir hablando de ello.'
+            },
+            {
+                c: 'intento 4 · el vacío',
+                code: ['const nada = [];'],
+                probe: 'nada.length',
+                v: () => 'vacío no es nada: hay un contenedor, y su vacío tiene medida.'
+            },
+            {
+                c: 'intento 5 · la función que no hace nada (noop)',
+                code: [
+                    'const nada = () => {};',
+                    'let n = 0, t = performance.now();',
+                    'for (let i = 0; i < 2e7; i++) if (nada() === undefined) n++;',
+                    'const ms = performance.now() - t;'
+                ],
+                probe: "ms.toFixed(1) + ' ms'",
+                v: r => 'un noop no es nada: es algo que no hace nada. 20 millones de llamadas costaron ' + r + ' de tu procesador.'
+            },
+            {
+                c: 'intento 6 · no declararla',
+                code: ['nada;'],
+                v: e => {
+                    const n = ((e && e.stack) || '').split('\n').filter(Boolean).length;
+                    return 'lo más cerca que llega el lenguaje: se niega a reconocerla. pero la negativa tiene nombre, mensaje y una pila de ' + n + ' líneas: otro algo.';
+                }
+            },
+            {
+                c: 'intento 7 · explicarla',
+                code: [
+                    "const explicar = (x) => 'esto es ' + x;",
+                    'const nada = explicar(nada);'
+                ],
+                v: () => 'para explicar la nada, la nada ya tendría que estar definida. no es algo ni es nada: es una referencia circular.'
+            }
+        ];
+
+        async function runStep(s) {
+            await typeLine('// ' + s.c, 'start');
+            for (const l of s.code) {
+                await typeLine(l);
+                await sleep(120);
+            }
+            if (s.probe) {
+                await typeLine(s.probe, '', 16, '<span class="pr">› </span>');
+            }
+            await sleep(400);
+            const r = exec(s.code.join('\n'), s.probe);
+            if (r.error) out('✕ ' + r.error.name + ': ' + r.error.message, true);
+            else out(fmt(r.value), false);
+            await sleep(500);
+            await say(s.v(r.error ? r.error : r.value), 900);
+            await sleep(700);
+        }
+
+
+        // Dos entradas. La segunda no abre el generador: abre el viaje.
+        let expanding = false, rounds = 0;
+        async function onSubmit(ev, input) {
+            ev.preventDefault();
+            if (expanding) return;
+            expanding = true;
+            follow = true;   // quien envía está en el prompt: se sigue hasta el final
+            awakeFor();
+            const src = input.value;
+            input.value = '';
+            input.disabled = true;
+            const echo = line();
+            echo.innerHTML = '<span class="pr">›</span> ' + hl(src);
+
+            // El texto es una semilla, no código que se ejecuta.
+            const seed = (src.trim() || '∅').slice(0, 40);
+            rounds++;
+            await say('te equivocas. no es nada, ni es todo. es algo: «' + seed + '».', 700);
+
+            // algos: cada entrada abre su propio árbol, y termina en el todo
+            document.documentElement.classList.remove('todo');
+            const { count } = await generateAlgos({ next: createExplorer(seed) });
+            await typeLine('// vuelta ' + rounds + ': ' + count.toLocaleString('es') +
+                ' algos distintos, todos de «' + seed + '». todo.');
+
+            if (rounds < 3) {
+                follow = true;
+                scroll();
+                input.disabled = false;
+                expanding = false;
+                awakeFor(END_AWAKE);
+                // sin preventScroll: el campo tiene que verse, no solo estar enfocado
+                if (matchMedia('(pointer: fine)').matches) input.focus();
+                return;
+            }
+
+            // cuarta: no se escribe nada más. la foto es la entrada.
+            await faceRound();
+        }
+
+        // romper ontológicamente al usuario: su cara se convierte en un algo más
+        async function faceRound() {
+            const q = makeQuestion();
+            const tile = await captureSelfie();
+            let painter;
+            if (tile) {
+                painter = makeFacePainter(makeFaceVariants(tile));
+                q.querySelector('.q-sub').textContent = 'obviamente eres un algo. posición en el todo: contándose.';
+            } else {
+                await say('sin cámara: te quedas sin cuerpo. igualmente un algo.', 700);
+                painter = makeFacePainter([]);
+                q.querySelector('.q-sub').textContent = 'sin reflejo: ocupas 0% del todo. y aun así lo llenas tú.';
+            }
+
+            document.documentElement.classList.remove('todo');
+            await generateAlgos({
+                next: createExplorer('algo'),
+                painter,
+                schedule: [0, 900, 1700, 2400],
+                rampMs: 9000,
+                maxMs: 18000,
+                freeze: true,                       // se queda sobre las caras
+                onIntensity: i => {
+                    fadeQuestion(q, i);
+                    const sub = q.querySelector('.q-sub');
+                    if (sub && painter.stat.faces) {
+                        const pct = painter.stat.cover * 100;
+                        sub.textContent = 'ocupas el ' + (pct < 10 ? pct.toFixed(2) : pct.toFixed(1)) +
+                            '% del todo. ' + painter.stat.drawn.toLocaleString('es') + ' veces tú.';
+                    }
+                }
+            });
+
+            q.remove();
+            const w = document.createElement('div');
+            w.className = 'fin-word';
+            w.textContent = 'fin ¿o es el comienzo?';
+            document.body.append(w);
+            requestAnimationFrame(() => requestAnimationFrame(() => w.style.opacity = '1'));
+            await realSleep(3400);
+            hardReset();                            // segunda nada
+        }
+
+        /* ---------- fase C: generar algos hasta que sea todo ---------- */
+        const algoSources = [
+            () => '1',
+            () => '0',
+            () => 'algo',
+            () => 'otro',
+            () => String(Math.floor(Math.random() * 1e4)),
+            () => Math.random().toFixed(2 + Math.floor(Math.random() * 6)),
+            () => ['{}', '[]', '""', '()', 'x', 'y', 'i', 'a', 'é', 'ñ', 'λ', 'π', '∅', '∞', '°', '·', '∴'][Math.floor(Math.random() * 17)],
+            () => ['true', 'false', 'null', 'NaN', 'void 0', 'new Set()', '-0', '0n', 'Symbol()', '1/3'][Math.floor(Math.random() * 10)],
+            () => String.fromCodePoint(0x21 + Math.floor(Math.random() * 0x5e)),
+            () => String.fromCodePoint([0x3b1, 0x4e00, 0x5d0, 0x904, 0x2600, 0x1f300][Math.floor(Math.random() * 6)] + Math.floor(Math.random() * 40)),
+            () => Math.random().toString(36).slice(2, 4 + Math.floor(Math.random() * 5)),
+            () => '0x' + Math.floor(Math.random() * 0xffff).toString(16),
+            () => ['sí', 'no', 'aquí', 'ahora', 'yo', 'tú', 'esto', 'eso', 'luz', 'piedra', 'bit', 'voz', 'y', 'o', 'un', 'más'][Math.floor(Math.random() * 16)],
+        ];
+        const randomAlgo = () => algoSources[Math.floor(Math.random() * algoSources.length)]();
+
+        /* Cada nodo engendra varias ramas; recorrerlas en anchura evita una sola cadena. */
+        const LETTERS = 'aeiounslrtmpdcgbfhvyzáéíóúñxqwkj';
+        const rnd = n => Math.floor(Math.random() * n);
+        const pick = () => LETTERS[rnd(LETTERS.length)];
+        function mutate(s) {
+            const a = Array.from(s);
+            const i = rnd(a.length);
+            const ops = [
+                () => s + 's',
+                () => s + pick(),
+                () => a.length > 1 ? a.slice(0, -1).join('') : s + pick(),
+                () => a.length > 1 ? a.slice(1).join('') : s + pick(),
+                () => a.slice(0, i).join('') + pick() + a.slice(i + 1).join(''),
+                () => a.slice(0, i).join('') + pick() + a.slice(i).join(''),
+                () => a.length > 1 ? a.slice(0, i).join('') + a.slice(i + 1).join('') : s + pick(),
+                () => a.slice(0, i).join('') + a[i] + a.slice(i).join(''),
+                () => a.slice().reverse().join(''),
+                () => a.slice(i).concat(a.slice(0, i)).join(''),
+                () => { const b = a.slice(); b[i] = b[i].toUpperCase() === b[i] ? b[i].toLowerCase() : b[i].toUpperCase(); return b.join(''); },
+                () => { const b = a.slice(); if (b.length > 1) [b[i], b[(i + 1) % b.length]] = [b[(i + 1) % b.length], b[i]]; return b.join(''); },
+            ];
+            return ops[rnd(ops.length)]().slice(0, 40) || 'a';
+        }
+
+        /* ---------- la pregunta que flota ---------- */
+        function makeQuestion() {
+            const el = document.createElement('div');
+            el.className = 'float-q';
+            el.innerHTML = '<p class="q-main">¿y tú qué eres?</p><p class="q-sub"></p>';
+            document.body.append(el);
+            return el;
+        }
+        // La pregunta se queda donde está, legible: el que se deforma es el algo, no la pregunta.
+        let lastDeg = 0;
+        function fadeQuestion(el, i) {
+            if (!el) return;
+            const now = performance.now();
+            if (now - lastDeg < 160) return;
+            lastDeg = now;
+            el.style.opacity = (1 - i * 0.25).toFixed(2);
+            el.style.letterSpacing = (i * 0.06).toFixed(3) + 'em';
+        }
+
+        /* ---------- cámara y selfie ---------- */
+        async function openCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                const v = document.createElement('video');
+                v.autoplay = true; v.playsInline = true; v.muted = true;
+                v.srcObject = stream;
+                await v.play().catch(() => {});
+                await Promise.race([
+                    new Promise(r => { if (v.videoWidth) r(); else v.onloadedmetadata = r; }),
+                    realSleep(3000)
+                ]);
+                if (!v.videoWidth) { stream.getTracks().forEach(t => t.stop()); return null; }
+                return { video: v, stream };
+            } catch { return null; }
+        }
+
+        async function captureSelfie() {
+            const cam = await openCamera();
+            if (!cam) return null;
+            const holder = document.createElement('div');
+            holder.className = 'selfie';
+            holder.append(cam.video);
+            document.body.append(holder);
+            await realSleep(1400);
+            const tile = document.createElement('canvas');
+            tile.width = 320; tile.height = 240;
+            const tg = tile.getContext('2d');
+            tg.translate(tile.width, 0); tg.scale(-1, 1);          // espejo: es un selfie
+            tg.drawImage(cam.video, 0, 0, tile.width, tile.height);
+            cam.stream.getTracks().forEach(t => t.stop());
+            holder.remove();
+            return tile;
+        }
+
+        /* La foto es un algo más: se muta en el árbol igual que las palabras.
+           Cada variante precalculada es más aberrante que la anterior. */
+        function makeFaceVariants(tile, n = 18) {
+            const out = [];
+            for (let k = 0; k < n; k++) {
+                const sev = n === 1 ? 0 : k / (n - 1);
+                const c = document.createElement('canvas');
+                c.width = Math.round(tile.width * 1.4);
+                c.height = Math.round(tile.height * 1.4);
+                const g = c.getContext('2d');
+                const ox = (c.width - tile.width) / 2, oy = (c.height - tile.height) / 2;
+                const hue = Math.round(sev * 300 * (k % 2 ? 1 : -1));
+                g.filter = 'hue-rotate(' + hue + 'deg) saturate(' + (1 + sev * (2 + k % 3)) +
+                    ') brightness(' + (1 + (k % 4 === 0 ? sev * 1.1 : -sev * 0.4)) +
+                    ') contrast(' + (1 + sev * 1.5) + ')' + (k % 5 === 3 ? ' invert(1)' : '');
+                g.drawImage(tile, ox, oy);
+                g.filter = 'none';
+                const bands = Math.floor(sev * 8);                 // desgarro interno de la cara
+                for (let b = 0; b < bands; b++) {
+                    const by = Math.random() * tile.height;
+                    const bh = 2 + Math.random() * (8 + sev * 30);
+                    const dx = (Math.random() * 2 - 1) * (8 + sev * 90);
+                    g.drawImage(c, 0, oy + by, c.width, bh, dx, oy + by, c.width, bh);
+                }
+                if (sev > 0.5) {                                   // basura sobre la cara
+                    for (let j = 0; j < sev * 30; j++) {
+                        g.globalAlpha = .3 + Math.random() * .5;
+                        g.fillStyle = ['#fff', '#000', '#f00', '#0ff', '#ff0', '#80f'][Math.floor(Math.random() * 6)];
+                        g.fillRect(Math.random() * c.width, Math.random() * c.height, 2 + Math.random() * 34 * sev, 1 + Math.random() * 6);
+                    }
+                    g.globalAlpha = 1;
+                }
+                if (sev > 0.84) {                                   // la cara se disuelve
+                    g.globalAlpha = (sev - 0.84) / 0.16 * 0.85;
+                    g.fillStyle = '#000';
+                    g.fillRect(0, 0, c.width, c.height);
+                    g.globalAlpha = 1;
+                }
+                out.push({ sev, canvas: c });
+            }
+            return out;
+        }
+
+        function makeFacePainter(faces) {
+            const st = { cover: 0, drawn: 0 };
+            if (!faces || !faces.length) {
+                const fallback = (g, info) => {
+                    g.font = info.size + 'px ui-monospace, Menlo, monospace';
+                    g.fillStyle = '#fff';
+                    g.fillText(info.txt, info.x, info.y);
+                    return g.measureText(info.txt).width * info.size * .9;
+                };
+                st.faces = false;
+                fallback.stat = st;
+                return fallback;
+            }
+            const paint = (g, info, W, H) => {
+                const p = info.progress;
+                const depth = Math.min(info.gen, 18);
+                const sev = Math.max(0, Math.min(1, p * 0.75 + (depth / 18) * 0.4));
+                const f = faces[Math.min(faces.length - 1, Math.round(sev * (faces.length - 1)))];
+                const first = info.count === 0;
+                const sc = 0.3 + Math.random() * (1.5 - p * 0.75);
+                let w, h;
+                if (first) { w = W * 0.46; h = w * (f.canvas.height / f.canvas.width); }
+                else { w = f.canvas.width * 0.4 * sc; h = f.canvas.height * 0.4 * sc; }
+                g.save();
+                g.translate(info.x, info.y);
+                if (!first) g.rotate((Math.random() - .5) * (.1 + sev * 2.6));
+                if (!first && Math.random() < .22 + sev * .3) g.scale(-1, 1);
+                g.globalAlpha = first ? 1 : .74 + .26 * (1 - sev);
+                g.drawImage(f.canvas, -w / 2, -h / 2, w, h);
+                g.restore();
+                g.globalAlpha = 1;
+                if (st.drawn % 6 === 3) {                            // la palabra que la engendró
+                    g.font = (8 + Math.random() * 7) + 'px ui-monospace, Menlo, monospace';
+                    g.fillStyle = 'rgba(255,255,255,.75)';
+                    g.fillText(info.txt, info.x, info.y + h * .62);
+                    g.fillStyle = '#fff';
+                }
+                st.drawn++;
+                st.cover = Math.min(1, st.cover + (w * h * .62) / (W * H));
+                return w * h * .5;
+            };
+            st.faces = true;
+            paint.stat = st;
+            return paint;
+        }
+
+        /* ---------- el viaje del hacedor de estrellas, sin texto ----------
+           lo que se ve: una luz verde que se queda atrás → estrellas → una galaxia
+           espiral → muchas galaxias → el cosmos como un objeto entre otras obras
+           → algo inmenso y remoto → negro. ni una palabra. */
+        function starMaker() {
+            return new Promise(resolve => {
+                const K = matchMedia('(prefers-reduced-motion: reduce)').matches ? .45 : 1;
+                const cv = document.createElement('canvas');
+                cv.className = 'journey';
+                document.body.append(cv);
+                const dpr = Math.min(devicePixelRatio || 1, 2);
+                const W = innerWidth, H = innerHeight;
+                cv.width = W * dpr; cv.height = H * dpr;
+                cv.style.width = W + 'px'; cv.style.height = H + 'px';
+                const g = cv.getContext('2d');
+                g.scale(dpr, dpr);
+                const R = Math.hypot(W, H) / 2;
+
+                const stars = Array.from({ length: 900 }, () => ({
+                    a: Math.random() * 6.2832, d: Math.random(), v: .5 + Math.random() * 1.6,
+                    s: .5 + Math.random() * 1.4, t: Math.random()
+                }));
+                const gal = [];
+                for (let arm = 0; arm < 4; arm++) for (let i = 0; i < 130; i++) {
+                    const t = i / 130;
+                    gal.push({
+                        ang: arm * 1.5708 + t * 3.6 + (Math.random() - .5) * .5,
+                        rad: 16 + t * 210, s: .5 + Math.random() * 1.5,
+                        w: t < .22 ? 1 : .5, t: Math.random()
+                    });
+                }
+                for (let i = 0; i < 70; i++)
+                    gal.push({ ang: Math.random() * 6.2832, rad: Math.random() * 46, s: .7 + Math.random() * 1.3, w: 1, t: Math.random() });
+                const galx = Array.from({ length: 80 }, () => ({
+                    x: (Math.random() - .5), y: (Math.random() - .5), z: Math.random(),
+                    s: .45 + Math.random(), t: Math.random()
+                }));
+                const cosmos = Array.from({ length: 9 }, (_, i) => ({
+                    type: i === 4 ? -1 : i % 5,
+                    hue: 190 + Math.random() * 170,
+                    x: (Math.random() - .5) * 1.9, y: (Math.random() - .5) * 1.05,
+                    r: .09 + Math.random() * .12, sp: (Math.random() - .5) * .7,
+                    pts: Array.from({ length: 300 }, () => ({
+                        u: Math.random() * 6.2832, v: Math.acos(2 * Math.random() - 1), k: Math.random()
+                    }))
+                }));
+
+                const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill(); };
+                const ramp = (e, a, b) => Math.max(0, Math.min(1, Math.min((e - a) / 1400, (b - e) / 1400)));
+
+                // 1 · la luz verde de la esquina se queda atrás
+                function phPoint(p, e) {
+                    const size = Math.max(1.4, 96 * (1 - p) * (1 - p) + 7);
+                    const gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, size * 7);
+                    gr.addColorStop(0, 'rgba(60,240,130,' + (.55 * (1 - p)).toFixed(3) + ')');
+                    gr.addColorStop(1, 'rgba(60,240,130,0)');
+                    g.fillStyle = gr;
+                    g.beginPath(); g.arc(W / 2, H / 2, size * 7, 0, 6.2832); g.fill();
+                    g.fillStyle = 'rgba(140,255,180,' + (.95 - p * .7).toFixed(3) + ')';
+                    const b = size, t = b * .27;
+                    g.fillRect(W / 2 - t / 2, H / 2 - b / 2, t, b);
+                    g.fillRect(W / 2 - b / 2, H / 2 - t / 2, b, t);
+                }
+
+                // 2 · el campo de estrellas corre hacia fuera
+                function phStars(p, e) {
+                    for (const s of stars) {
+                        const k = (s.d + p * s.v * .95) % 1;
+                        const rad = 5 + k * k * R * 2.5;
+                        const x = W / 2 + Math.cos(s.a) * rad, y = H / 2 + Math.sin(s.a) * rad;
+                        const fl = .7 + .3 * Math.sin(e * .004 + s.t * 9);
+                        const al = (1 - k) * fl;
+                        if (al <= .02) continue;
+                        const c = s.t > .78 ? 'rgba(255,226,180,' : 'rgba(196,216,255,';
+                        if (k > .45 && s.t < .22) {
+                            g.strokeStyle = c + (al * .5).toFixed(3) + ')';
+                            g.lineWidth = s.s * .9;
+                            g.beginPath(); g.moveTo(x, y);
+                            g.lineTo(W / 2 + Math.cos(s.a) * rad * .9, H / 2 + Math.sin(s.a) * rad * .9);
+                            g.stroke();
+                        }
+                        dot(x, y, s.s * (.5 + k * 1.1), c + al.toFixed(3) + ')');
+                    }
+                }
+
+                // 3 · una galaxia espiral mientras nos alejamos
+                function phGalaxy(p, e) {
+                    const sc = (1 - p * .93) * Math.min(W, H) / 640;
+                    const rot = e * .00006 + p * 1.1;
+                    const core = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 90 * sc + 6);
+                    core.addColorStop(0, 'rgba(255,240,214,' + (.75 - p * .5).toFixed(3) + ')');
+                    core.addColorStop(1, 'rgba(255,240,214,0)');
+                    g.fillStyle = core;
+                    g.beginPath(); g.arc(W / 2, H / 2, 90 * sc + 6, 0, 6.2832); g.fill();
+                    g.save();
+                    g.translate(W / 2, H / 2); g.rotate(-.34); g.scale(1, .4);
+                    for (const d of gal) {
+                        const a = d.ang + rot;
+                        dot(Math.cos(a) * d.rad * sc, Math.sin(a) * d.rad * sc,
+                            Math.max(.35, d.s * sc * 1.7),
+                            (d.w > .8 ? 'rgba(255,236,205,' : 'rgba(190,214,255,') + (.3 + d.w * .55).toFixed(3) + ')');
+                    }
+                    g.restore();
+                }
+
+                // 4 · muchas galaxias, cada vez más pequeñas, hasta ser granos
+                function phGalaxies(p, e) {
+                    const zoom = 1 - p * .92;
+                    for (const q of galx) {
+                        const x = W / 2 + q.x * W * (1.5 - p) * .78;
+                        const y = H / 2 + q.y * H * (1.5 - p) * .78;
+                        const s = Math.max(.8, q.s * 15 * zoom);
+                        g.save();
+                        g.translate(x, y); g.rotate(q.z * 6.2832 + e * .00004);
+                        g.scale(1, .28 + q.z * .45);
+                        const gr = g.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
+                        gr.addColorStop(0, 'rgba(210,228,255,' + (.5 - p * .3).toFixed(3) + ')');
+                        gr.addColorStop(1, 'rgba(210,228,255,0)');
+                        g.fillStyle = gr;
+                        g.beginPath(); g.arc(0, 0, s * 2.4, 0, 6.2832); g.fill();
+                        g.fillStyle = 'rgba(255,243,222,' + (.85 - p * .55).toFixed(3) + ')';
+                        g.beginPath(); g.arc(0, 0, s * .55, 0, 6.2832); g.fill();
+                        g.restore();
+                    }
+                }
+
+                // 5 · el cosmos como un objeto entre otras obras
+                function phCosmos(p, e) {
+                    const k = 1 - p * .5;
+                    for (const c of cosmos) {
+                        const x = W / 2 + c.x * W * .3 * k;
+                        const y = H / 2 + c.y * H * .3 * k;
+                        const rr = Math.min(W, H) * c.r * k;
+                        const rot = e * .00012 * (1 + c.sp) + c.x;
+                        const col = 'hsla(' + c.hue.toFixed(0) + ',80%,72%,';
+                        if (c.type === -1) {                  // el nuestro: espiral pálida y pequeña
+                            g.save(); g.translate(x, y); g.rotate(rot); g.scale(1, .38);
+                            for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 34; i++) {
+                                const t = i / 34, a = arm * 2.0944 + t * 3.1;
+                                dot(Math.cos(a) * t * rr, Math.sin(a) * t * rr, Math.max(.4, rr * .035), col + '.55)');
+                            }
+                            g.restore();
+                            dot(x, y, rr * .09, 'rgba(255,246,228,.8)');
+                            continue;
+                        }
+                        g.save(); g.translate(x, y); g.rotate(rot * .6);
+                        const halo = g.createRadialGradient(0, 0, 0, 0, 0, rr * 1.5);
+                        halo.addColorStop(0, 'hsla(' + c.hue.toFixed(0) + ',85%,70%,.28)');
+                        halo.addColorStop(1, 'hsla(' + c.hue.toFixed(0) + ',85%,70%,0)');
+                        g.fillStyle = halo;
+                        g.beginPath(); g.arc(0, 0, rr * 1.5, 0, 6.2832); g.fill();
+                        if (c.type === 0) {
+                            for (const q of c.pts)
+                                dot(Math.cos(q.u) * Math.sin(q.v) * rr, Math.cos(q.v) * rr * .95,
+                                    Math.max(.35, rr * .03), col + (.25 + q.k * .5).toFixed(2) + ')');
+                        } else if (c.type === 1) {
+                            for (const q of c.pts) {
+                                const a = q.u, b = a + q.k * 1.1;
+                                dot(Math.cos(a) * (rr + Math.cos(b) * rr * .3),
+                                    Math.sin(a) * (rr + Math.cos(b) * rr * .3) * .5,
+                                    Math.max(.35, rr * .03), col + (.3 + q.k * .45).toFixed(2) + ')');
+                            }
+                        } else if (c.type === 2) {
+                            g.strokeStyle = col + '.5)';
+                            g.lineWidth = Math.max(.4, rr * .022);
+                            for (let i = 0; i < 8; i++) {
+                                const a = i * .7854;
+                                g.beginPath(); g.moveTo(0, 0);
+                                g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * (i % 2 ? .5 : 1));
+                                g.stroke();
+                            }
+                            g.beginPath(); g.ellipse(0, 0, rr, rr * .5, 0, 0, 6.2832); g.stroke();
+                        } else if (c.type === 3) {
+                            for (const q of c.pts) {
+                                const h = (q.k * 2 - 1) * rr;
+                                dot(Math.sin(q.u) * rr * (1 - Math.abs(h) / rr) * .8, h,
+                                    Math.max(.35, rr * .03), col + (.2 + q.k * .55).toFixed(2) + ')');
+                            }
+                        } else {
+                            for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++)
+                                dot((i / 6 - .5) * rr * 1.6, (j / 6 - .5) * rr * 1.6, Math.max(.35, rr * .03), col + '.5)');
+                        }
+                        g.restore();
+                    }
+                }
+
+                // 6 · algo inmenso y remoto, que nunca se ve entero
+                function phMaker(p, e) {
+                    const cx = W / 2, cy = H * .5;
+                    const pulse = .55 + .45 * Math.sin(e * .0007);
+                    for (let i = 6; i >= 0; i--) {
+                        const rr = Math.min(W, H) * (.18 + i * .13) * (1 + p * .5);
+                        g.strokeStyle = 'rgba(206,224,255,' + ((.16 - i * .018) * pulse).toFixed(3) + ')';
+                        g.lineWidth = 1 + i * .5;
+                        g.beginPath(); g.arc(cx, cy, rr, 0, 6.2832); g.stroke();
+                    }
+                    const core = g.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * .3);
+                    core.addColorStop(0, 'rgba(228,238,255,' + (.5 * pulse).toFixed(3) + ')');
+                    core.addColorStop(.35, 'rgba(160,186,240,' + (.16 * pulse).toFixed(3) + ')');
+                    core.addColorStop(1, 'rgba(120,150,220,0)');
+                    g.fillStyle = core;
+                    g.beginPath(); g.arc(cx, cy, Math.min(W, H) * .3, 0, 6.2832); g.fill();
+                    g.fillStyle = 'rgba(2,3,6,.96)';
+                    g.beginPath(); g.arc(cx, cy, Math.min(W, H) * .035, 0, 6.2832); g.fill();
+                    for (const c of cosmos) {
+                        const x = W / 2 + c.x * W * .3 * (1 - p) * (1 - p);
+                        const y = H / 2 + c.y * H * .3 * (1 - p) * (1 - p);
+                        dot(x, y, Math.max(.6, Math.min(W, H) * c.r * (1 - p) * .5),
+                            'hsla(' + c.hue.toFixed(0) + ',85%,78%,' + (.7 * (1 - p * .6)).toFixed(2) + ')');
+                    }
+                }
+
+                const PH = [
+                    [0, 8000, phPoint], [7600, 15500, phStars], [15000, 23500, phGalaxy],
+                    [23000, 31500, phGalaxies], [31000, 40000, phCosmos], [39500, 48000, phMaker]
+                ].map(([a, b, f]) => [a / K, b / K, f]);
+                const END = 51000 / K;
+
+                let raf = 0;
+                const t0 = performance.now();
+                function frame(now) {
+                    const e = now - t0;
+                    g.fillStyle = '#000';
+                    g.fillRect(0, 0, W, H);
+                    for (const [a, b, f] of PH) {
+                        if (e < a - 1500 || e > b + 1500) continue;
+                        const al = ramp(e, a, b);
+                        if (al <= .01) continue;
+                        g.globalAlpha = al;
+                        f(Math.max(0, Math.min(1, (e - a) / (b - a))), e);
+                        g.globalAlpha = 1;
+                    }
+                    if (e < 1600 / K) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
+                    if (e > END - 2200 / K) {
+                        g.fillStyle = 'rgba(0,0,0,' + Math.min(1, (e - (END - 2200 / K)) / (2000 / K)).toFixed(3) + ')';
+                        g.fillRect(0, 0, W, H);
+                    }
+                    if (e >= END) { cancelAnimationFrame(raf); cv.remove(); return resolve(); }
+                    raf = requestAnimationFrame(frame);
+                }
+                raf = requestAnimationFrame(frame);
+            });
+        }
+
+        /* ---------- la farmacia de su calle ---------- */
+        function pharmacy() {
+            const st = document.createElement('div');
+            st.className = 'street';
+            st.innerHTML = `
+                <div class="st-sky"></div><div class="st-far"></div>
+                <div class="pharm">
+                    <div class="ph-facade">
+                        <div class="ph-sign"><span class="ph-name">farmacia</span>
+                            <span class="cross"><i></i><i></i></span></div>
+                        <div class="ph-win"></div><div class="ph-door"></div>
+                    </div>
+                </div>
+                <div class="st-lamp"></div><div class="st-ground"></div>
+                <div class="st-quote">
+                    <p>El espacio es grande. Muy grande. No te creerías lo asombrosamente,
+                    absurdamente y alucinantemente grande que es. A lo mejor piensas que hay un
+                    buen trecho hasta la farmacia de tu calle, pero eso no es nada comparado
+                    con el espacio.</p>
+                    <p class="en">"Space is big. Really big. You just won't believe how vastly, hugely,
+                    mind-bogglingly big it is. I mean, you may think it's a long way down the road
+                    to the chemist's, but that's just peanuts to space."</p>
+                    <p class="src">douglas adams · guía del autoestopista galáctico</p>
+                    <button class="restart" type="button">↻</button>
+                </div>`;
+            document.body.append(st);
+            st.querySelector('.restart').addEventListener('click', () => location.reload());
+            requestAnimationFrame(() => requestAnimationFrame(() => st.classList.add('on')));
+            setTimeout(() => st.querySelector('.st-quote').classList.add('on'), 2600);
+            awakeFor(8 * 60e3);
+        }
+
+        /* ---------- el reset: como si no hubiera pasado nada ---------- */
+        function hardReset() {
+            dead = true;
+            if (genStop) genStop();
+
+            dismissPerspective();
+            epoch++;
+            document.querySelectorAll('.float-q, .selfie, .fin-word, #algos, #algos-count, #todo, .journey, .street').forEach(n => n.remove());
+            document.documentElement.classList.remove('todo');
+            document.documentElement.style.cursor = '';
+            document.body.style.cursor = '';
+            document.body.innerHTML = BOOT.body;          // el HTML exacto con el que se cargó
+            bindRefs();
+            resEl.textContent = BOOT.residue;
+            residue = 0; phase = 'A'; anchor = null; follow = true; lastY = 0;
+            rounds = 0; expanding = false;
+            dead = false;
+            awakeFor();
+            main();
+        }
+
+        function createExplorer(seed) {
+            const seen = new Set([seed]);
+            const branches = [seed];
+            const gens = [0];                                  // distancia a la semilla
+            let parent = 0, children = 0, serial = 0;
+            const next = count => {
+                if (count === 0) { next.gen = 0; return seed; }
+                let child;
+                for (let tries = 0; tries < 32; tries++) {
+                    const root = branches[parent];
+                    if (tries % 5 === 4 && branches.length > 2) {
+                        const other = branches[rnd(branches.length)];
+                        child = (root.slice(0, Math.max(1, Math.ceil(root.length / 2))) +
+                            other.slice(Math.floor(other.length / 2))).slice(0, 40);
+                    } else {
+                        child = mutate(root);
+                    }
+                    if (!seen.has(child)) break;
+                }
+                if (seen.has(child)) {
+                    // Mantener el parentesco incluso si una rama corta agota sus variantes.
+                    do { child = branches[parent].slice(0, 28) + '·' + (++serial).toString(36); }
+                    while (seen.has(child));
+                }
+                seen.add(child);
+                branches.push(child);
+                gens.push(Math.min(24, gens[parent] + 1));
+                next.gen = gens[gens.length - 1];
+                if (++children === 3) { children = 0; parent++; }
+                return child;
+            };
+            next.gen = 0;
+            return next;
+        }
+
+
+        function generateAlgos(opts = {}) {
+            // La muestra es parte del Todo, nunca del generador. No confiar en el scroll para ocultarla.
+            dismissPerspective();
+            const O = Object.assign({ next: randomAlgo, painter: null, rampMs: 15000, maxMs: 20000, onIntensity: null, freeze: false }, opts);
+            return new Promise(resolve => {
+                const cv = document.createElement('canvas');
+                cv.id = 'algos';
+                const counter = document.createElement('div');
+                counter.id = 'algos-count';
+                counter.textContent = 'algos: 0';
+                document.body.append(cv, counter);
+
+                const dpr = Math.min(devicePixelRatio || 1, 2);
+                const W = innerWidth, H = innerHeight;
+                cv.width = W * dpr; cv.height = H * dpr;
+                cv.style.width = W + 'px'; cv.style.height = H + 'px';
+                const g = cv.getContext('2d');
+                g.scale(dpr, dpr);
+
+                // se pinta directo en el canvas visible: sin posprocesado global.
+                g.fillStyle = '#000';
+                g.fillRect(0, 0, W, H);
+                g.textBaseline = 'middle';
+                g.textAlign = 'center';
+                g.fillStyle = '#fff';
+
+                const area = W * H;
+                let ink = 0, count = 0, firstDiff = '', pending = 0, rafId = 0, progress = 0;
+                const start = performance.now();
+                const schedule = O.schedule || [0, 1500, 2600, 3400, 4000, 4500, 4900, 5200, 5450, 5650];
+                const t0 = schedule[schedule.length - 1];
+                genStop = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } };
+
+                function draw(t) {
+                    const txt = O.next(count);
+                    progress = Math.max(0, Math.min(1, (t - t0) / (O.rampMs - t0)));
+                    const size = count < schedule.length
+                        ? 44 - count * 3
+                        : Math.max(9, 28 - progress * 18) * (0.6 + Math.random() * 0.9);
+                    const info = {
+                        txt, count, size, progress, gen: O.next.gen || 0,
+                        x: count === 0 ? W / 2 : Math.random() * W,
+                        y: count === 0 ? H / 2 : Math.random() * H
+                    };
+                    if (O.painter) {
+                        ink += O.painter(g, info, W, H) || 0;
+                    } else {
+                        g.font = (count === 0 ? '600 ' : '') + size + 'px ui-monospace, Menlo, Consolas, monospace';
+                        g.fillStyle = '#fff';
+                        g.fillText(txt, info.x, info.y);
+                        ink += g.measureText(txt).width * size * 0.9;
+                    }
+                    count++;
+                    if (count === 1) firstDiff = '"' + txt + '" sobre negro';
+                }
+
+                function frame(now) {
+                    if (dead) return;
+                    const t = now - start;
+                    if (count < schedule.length) {
+                        if (t >= schedule[count]) draw(t);
+                    } else {
+                        // crecimiento exponencial: dobla cada 0.75 s
+                        const rate = 2 ** ((t - t0) / 750);
+                        pending += rate / 60;
+                        let n = Math.min(4000, Math.floor(pending));
+                        pending -= n;
+                        while (n-- > 0) draw(t);
+                    }
+                    counter.textContent = 'algos: ' + count.toLocaleString('es');
+                    if (O.onIntensity) O.onIntensity(progress);
+                    if (ink > area * 3.2 || t > O.maxMs) {
+                        cancelAnimationFrame(rafId);
+                        return finish(Math.round(t / 1000));
+                    }
+                    rafId = requestAnimationFrame(frame);
+                }
+
+                async function finish(seconds) {
+                    if (O.freeze) {
+                        cancelAnimationFrame(rafId);       // se queda congelado sobre las caras
+                        genStop = null;
+                        return resolve({ count, firstDiff, seconds });
+                    }
+                    g.setTransform(1, 0, 0, 1, 0, 0);
+                    g.globalCompositeOperation = 'source-over';
+                    g.globalAlpha = 1;
+                    g.fillStyle = '#fff';
+                    g.fillRect(0, 0, cv.width, cv.height);
+                    counter.textContent = 'algos: ∞';
+                    counter.style.color = '#000';
+                    counter.style.mixBlendMode = 'normal';
+                    const todo = document.createElement('div');
+                    todo.id = 'todo';
+                    todo.textContent = 'todo';
+                    document.body.append(todo);
+                    await realSleep(60);
+                    todo.style.opacity = 1;
+                    await realSleep(2600);
+                    document.documentElement.classList.add('todo');
+                    todo.style.opacity = 0;
+                    await realSleep(1200);
+                    cv.remove(); counter.remove(); todo.remove();
+                    genStop = null;
+                    resolve({ count, firstDiff, seconds });
+                }
+
+                rafId = requestAnimationFrame(frame);
+            });
+        }
+
+        /* ---------- programa ---------- */
+        async function main() {
+            await realSleep(900);
+            await typeLine('// objetivo: escribir la nada.');
+            await typeLine('// criterio: si hay algo que mostrar, el intento falló.');
+            await sleep(1300);
+
+            for (const s of steps) await runStep(s);
+
+            // intento 8: borrarlo todo
+            await typeLine('// intento 8 · borrarlo todo', 'start');
+            await typeLine('document.body.replaceChildren();');
+            await sleep(1100);
+
+            phase = 'B';
+
+            const kids = [...log.children];
+            for (let i = kids.length - 1, k = 0; i >= 0; i--, k++) {
+                kids[i].remove();
+                await sleep(Math.max(8, 80 - k * 5));   // el borrado también se puede pausar
+            }
+            hdr.style.opacity = 0;
+            await realSleep(1000);
+            const finalResidue = residue;
+            document.body.replaceChildren();
+
+            // el vacío: lo más cerca que puede estar este sitio de la nada
+            document.documentElement.style.cursor = 'none';
+            document.body.style.cursor = 'none';
+            let frames = 0, raf;
+            const tick = () => { frames++; raf = requestAnimationFrame(tick); };
+            tick();
+            const t0 = performance.now();
+            await realSleep(7000);
+            cancelAnimationFrame(raf);
+            const secs = Math.round((performance.now() - t0) / 1000);
+            document.documentElement.style.cursor = '';
+            document.body.style.cursor = '';
+
+            // SEGUNDA NADA: acaba de acabar. aquí no sale el generador de algos.
+            if (epoch > 0) {
+                const calm = document.createElement('main');
+                calm.className = 'wrap';
+                document.body.append(calm);
+                log = calm;
+                follow = true;
+                await typeLine('// pero no te preocupes.', 'em');
+                await sleep(400);
+                await typeLine('// todo es nada si lo comparas con el todo.', 'em');
+                await sleep(1900);
+                calm.style.transition = 'opacity 1.4s ease';
+                calm.style.opacity = '0';
+                await realSleep(1500);
+                calm.remove();
+                awakeFor();
+                await starMaker();
+                pharmacy();
+                return;
+            }
+
+            // fase C: de la nada empiezan a salir algos
+            phase = 'C';
+            const { count, firstDiff, seconds } = await generateAlgos();
+
+            // fase D: el todo
+            phase = 'D';
+            document.documentElement.classList.add('todo');
+            const m = document.createElement('main');
+            m.className = 'wrap';
+            document.body.append(m);
+            log = m;
+            follow = true;
+
+            await typeLine('// ' + secs + ' segundos de negro. luego, de la nada, un algo.');
+            await typeLine('// después otro. y otro. ' + count.toLocaleString('es') + ' algos en ' + seconds + ' segundos.');
+            await typeLine('//');
+            await typeLine('// el primer algo se distinguía del fondo: era información (' + firstDiff + ').');
+            await typeLine('// el último no se distinguía de nada: ya no había fondo.');
+            await typeLine('//');
+            await sleep(600);
+            await typeLine('// corrección: que se vean iguales desde dentro no los hace idénticos.', 'em');
+            await typeLine('// el todo admite incluso un lugar donde algo falta.', 'em');
+            await typeLine('// la nada no admite el todo: no tiene lugar, ni dentro, ni fuera.', 'em');
+            await typeLine('//');
+            await typeLine('// desde el todo, la ausencia es suya; desde la nada, el todo no cabe.', 'em');
+            await typeLine('//');
+            const perspective = document.createElement('section');
+            perspective.className = 'perspective';
+            perspective.setAttribute('aria-label', 'Explorar la asimetría entre todo y nada');
+            perspective.innerHTML = `
+                <div class="perspective-nav" role="group" aria-label="Punto de vista">
+                    <button type="button" data-view="todo" aria-pressed="true">desde el todo</button>
+                    <button type="button" data-view="nada" aria-pressed="false">desde la nada</button>
+                </div>
+                <div class="perspective-stage" aria-hidden="true">
+                    <span class="absence"></span>
+                    <span class="stage-label">todo: incluso este hueco tiene lugar</span>
+                </div>
+                <div class="perspective-result" role="status" aria-live="polite">
+                    <strong>todo ⊃ ausencia</strong><br>El hueco pertenece a la imagen. No por eso el hueco es el todo.
+                </div>`;
+            log.append(perspective);
+            const stage = perspective.querySelector('.perspective-stage');
+            const stageLabel = perspective.querySelector('.stage-label');
+            const result = perspective.querySelector('.perspective-result');
+            // al desplazarse, el recuadro se esconde solo: no se queda colgado
+            perspective.style.visibility = 'hidden';
+            const onScrollStage = () => {
+                const r = perspective.getBoundingClientRect();
+                perspective.style.visibility = (r.bottom < -200 || r.top > innerHeight + 200) ? 'hidden' : 'visible';
+            };
+            addEventListener('scroll', onScrollStage, { passive: true });
+            perspectiveCleanup = () => removeEventListener('scroll', onScrollStage);
+            perspective.querySelectorAll('[data-view]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const fromNada = button.dataset.view === 'nada';
+                    perspective.querySelectorAll('[data-view]').forEach(b =>
+                        b.setAttribute('aria-pressed', String(b === button)));
+                    stage.classList.toggle('from-nada', fromNada);
+                    stageLabel.textContent = fromNada
+                        ? 'nada: no hay un interior desde el que mirar'
+                        : 'todo: incluso este hueco tiene lugar';
+                    result.innerHTML = fromNada
+                        ? '<strong>nada ⊅ todo</strong><br>El negro ocupa la pantalla como representación. La nada literal ni siquiera podría ser este negro.'
+                        : '<strong>todo ⊃ ausencia</strong><br>El hueco pertenece a la imagen. No por eso el hueco es el todo.';
+                });
+            });
+            await sleep(500);
+            await typeLine('// tu turno. escribe la nada (o el todo):');
+
+            const form = document.createElement('form');
+            form.className = 'ln prompt';
+            form.innerHTML = '<span class="pr">›</span><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Escribe la nada">';
+            log.append(form);
+            anchor = form;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'restart';
+            btn.textContent = '↻ empezar de nuevo';
+            btn.addEventListener('click', () => location.reload());
+            log.append(btn);
+
+            const input = form.querySelector('input');
+            form.addEventListener('submit', ev => onSubmit(ev, input));
+            if (matchMedia('(pointer: fine)').matches) {
+                // con ratón, un clic en cualquier parte enfoca la consola, como en una terminal
+                document.addEventListener('click', ev => {
+                    if (!ev.target.closest('button') && !String(getSelection())) input.focus();
+                });
+                input.focus();
+            }
+            // en táctil no se enfoca solo: cada toque abriría el teclado
+            scroll();
+            awakeFor(END_AWAKE);
+        }
+
+        main();
+    })();
+    </script>
+</body>
+</html>

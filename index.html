@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BnS Inc. — by MREugeneJ7</title>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --surface: #121215;
+      --border: #2a2723;
+      --gold: #c9a96e;
+      --ivory: #f5f2eb;
+      --muted: #8e8980;
+      --warn: #b87333;
+      --serif: "Didot", "Bodoni MT", "Cormorant Garamond", "Georgia", serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ivory);
+      font-family: var(--sans);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      text-align: center;
+      padding: 4.5rem 1.5rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .monogram {
+      display: inline-block;
+      border: 1px solid var(--gold);
+      padding: 0.4rem 1.2rem;
+      font-family: var(--serif);
+      font-size: 0.75rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.75rem;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(2.8rem, 6vw, 4.5rem);
+      letter-spacing: 0.14em;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .subtitle {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 1.15rem;
+      color: var(--gold);
+      letter-spacing: 0.18em;
+      margin-top: 0.4rem;
+    }
+    .edition {
+      font-size: 0.72rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 1rem;
+    }
+    .disclaimer {
+      max-width: 740px;
+      margin: 2.2rem auto 0;
+      padding: 1.15rem 1.6rem;
+      border: 1px solid var(--border);
+      background: rgba(201, 169, 110, 0.04);
+      font-size: 0.88rem;
+      color: #d6d0c4;
+      font-style: italic;
+    }
+    .satire-note {
+      margin-top: 0.7rem;
+      font-size: 0.7rem;
+      font-style: normal;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    main {
+      flex: 1;
+      max-width: 1180px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 3.5rem 1.5rem;
+    }
+    .collection-title {
+      text-align: center;
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 0.9rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 0 0 2.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.25s ease, transform 0.25s ease;
+    }
+    .card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+    .card-num {
+      font-family: var(--serif);
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 0.55rem;
+    }
+    .card h2 {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 1.32rem;
+      margin: 0 0 0.7rem;
+      letter-spacing: 0.03em;
+      line-height: 1.3;
+    }
+    .card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin: 0 0 1.1rem;
+    }
+    .nose-note {
+      font-size: 0.82rem;
+      color: #d6d0c4;
+      border-left: 2px solid var(--gold);
+      background: rgba(201, 169, 110, 0.03);
+      padding: 0.65rem 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+    .nose-label {
+      display: block;
+      font-family: var(--serif);
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.25rem;
+    }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      gap: 0.75rem;
+    }
+    .btn {
+      color: var(--gold);
+      text-decoration: none;
+      border: 1px solid var(--gold);
+      padding: 0.42rem 0.9rem;
+      white-space: nowrap;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn:hover {
+      background: var(--gold);
+      color: var(--bg);
+    }
+    .btn-disabled {
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.42rem 0.9rem;
+      white-space: nowrap;
+      cursor: not-allowed;
+    }
+    .model-tag {
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    footer a {
+      color: var(--gold);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+    footer a:hover {
+      border-bottom-color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="monogram">Maison de Slop • Est. 2026</div>
+    <h1>BnS Inc.</h1>
+    <div class="subtitle">by MREugeneJ7</div>
+    <div class="edition">Bullshit &amp; Slop Incorporated • Extrait d'Arena</div>
+
+    <div class="disclaimer">
+      “All this stuff is complete and utter bullshit, probably full of bugs that I won't fix, don't even ask me about it, but do come every once in a while in case I made anything new.”
+      <div class="satire-note">
+        Satirical &amp; experimental parody house • Not for profit • Zero cookies • Zero telemetry
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h2 class="collection-title">La Collection — 12 Essences</h2>
+    <div class="grid" id="catalog">
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 01 • Arcade</div>
+          <h2>Flappy-Pong-Arkanoid Roguelite</h2>
+          <p>Four arcade genres violently blended into one fragile browser canvas. Barely balanced, strangely playable.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Unfinished maceration. The perfumer lost patience prior to playtesting; its upper notes may prove mathematically unbeatable. We invite you to prove our olfactory judgment wrong.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">step-5-preview</span>
+          <a class="btn" href="projects/01-flappy-pong/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 02 • Audio</div>
+          <h2>Morse Code Psychedelic Rave</h2>
+          <p>Starts as a polite telegraph encoder; slowly mutates into an unsolicited audiovisual rave as you listen.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Strict etiquette advisory: abstain from profanity and psychedelic states during exposure. The photosensitive seizure hazard, however, is not a metaphor.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">claude-sonnet-5-5-high</span>
+          <a class="btn" href="projects/02-morse-rave/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 03 • Psychological</div>
+          <h2>The Gaslighting Chronometer</h2>
+          <p>A minimalist black stopwatch that subtly lies to your face about elapsed time until you question reality.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Formulated with deliberate chronological deceit; veracity was never part of the original distillation.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">qwen3.8-max-0902</span>
+          <a class="btn" href="projects/03-gaslight-chrono/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 04 • Narrative</div>
+          <h2>Startup Founder Simulator</h2>
+          <p>Swipe left or right on dubious AI pivots, VC delusions, and burn rate crises in a Reigns-style descent.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            An anomalous vintage. Against all house standards, this composition exhibits signs of genuine merit.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">muse-wonder-max</span>
+          <a class="btn" href="projects/04-founder-reigns/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 05 • Parody</div>
+          <h2>Carlisle Cullen Funeral Home</h2>
+          <p>He gave up vampirism to organize tasteful twilight wakes. Eternal rest, now with bespoke floral packages.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Heavily infused with nocturnal coven lore and questionable propriety. Do not inspect the legal accord—even should you locate it, you will inadvertently consent to terms best left unaccepted.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">claude-fable-5.2-max</span>
+          <a class="btn" href="projects/05-carlisle-funeral/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 06 • Existential</div>
+          <h2>Nothingness in Code</h2>
+          <p>An interactive meditation on absolute void. Do not expect features; the absence is the entire product.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Zero notes. Pure, unadulterated absence, bottled at great expense.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">muse-ember-max</span>
+          <a class="btn" href="projects/06-nothingness/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 07 • Exiled</div>
+          <h2>Three-Mode LaTeX Editor</h2>
+          <p>A Next.js + Drizzle + pdfkit studio with 8 export formats. Requires a Node server and fails the slop threshold.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            An unauthorized intrusion of competence. How this passed quality control remains under internal review; it is decidedly not slop.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">qwen3.8-27b</span>
+          <a class="btn" href="downloads/latex-editor-source.zip" download>Serve It Yourself</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 08 • Career</div>
+          <h2>AI-Proof Job Recommender</h2>
+          <p>Tells you which gloriously messy human professions remain safe from silicon replacement—for now.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Excessively distilled for a mere jest. Should the essence prescribe your own demise, kindly interpret it with clinical detachment.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">gemini-4-argon-high</span>
+          <a class="btn" href="projects/08-ai-proof-jobs/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 09 • Corporate Satire</div>
+          <h2>Satirical Corporate ATS</h2>
+          <p>An applicant tracking portal stripped of HR politeness, revealing the quiet part out loud. (Early surviving build; Arena nuked the final one.)</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Arena AI proved unprepared for Iberian wit. So much for the land of the free—had LLMs been forged in Spain, they would cheerfully instruct you in illicit synthesis while addressing you as an illegitimate scoundrel.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">deepseek-v4.1-flash-high</span>
+          <a class="btn" href="projects/09-satirical-ats/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 10 • Strategy RPG</div>
+          <h2>Canary Islands Creature Autobattler</h2>
+          <p>Red-era monster nostalgia meets card-battler synergies across the Canary Islands, Elite Four included.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            Rarely verified in live trials and genuinely playable, though silent regressions remain unverified. The debug menu remains exposed for instant scene-skipping—conventional play is superior, yet we indulge your lack of discipline. (Includes a link cable; under no circumstances bridge two computers USB-A to USB-A.)
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">claude-opus-5.5-high</span>
+          <a class="btn" href="projects/10-canary-autobattler/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 11 • Test Artifact</div>
+          <h2>Gaslighting Hello World</h2>
+          <p>Born yesterday just to test the Arena Personal Rank browser extension. Even a Hello World refuses to behave.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            A calibration specimen included entirely by accident, courtesy of an overzealous assistant that could not restrain itself from archiving everything.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">qwen4-max-xhigh</span>
+          <a class="btn" href="projects/11-gaslight-hello/index.html">Enter</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div>
+          <div class="card-num">N° 12 • Analytics</div>
+          <h2>PostLens — Semantic LinkedIn Analyzer</h2>
+          <p>Client-side semantic similarity and embeddings dashboard to dissect your own LinkedIn slop.</p>
+          <div class="nose-note">
+            <span class="nose-label">Nota de la nariz</span>
+            For those who have ever pondered the true volume of their own corporate slop—or the exact humbling limits of Gemini Nano—the empirical answer resides within.
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="model-tag">Option B (Unvoted)</span>
+          <a class="btn" href="projects/12-postlens-linkedin/dist/index.html">Enter</a>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <footer>
+    Distilled from unhinged battles on Arena.ai • Tracked with
+    <a href="https://addons.mozilla.org/es-ES/firefox/addon/arena-personal-rank/" target="_blank" rel="noopener">Arena Personal Rank</a>
+    (Zero-telemetry Firefox extension)
+  </footer>
+</body>
+</html>

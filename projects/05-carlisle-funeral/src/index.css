@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@theme {
+  --color-noir: #070709;
+  --color-coal: #0e0e12;
+  --color-ash: #16161d;
+  --color-smoke: #1f1f28;
+  --color-gold: #c9a86a;
+  --color-gold-light: #ecd9ab;
+  --color-gold-dark: #8a6f3a;
+  --color-bone: #f4efe3;
+  --color-stone-warm: #a8a29e;
+  --color-blood: #7f1d1d;
+  --color-wine: #3f1a1e;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Jost", sans-serif;
+  --font-accent: "Cormorant Garamond", serif;
+
+  --font-cinzel: "Cinzel", serif;
+  --font-plex: "IBM Plex Sans", sans-serif;
+  --font-fredoka: "Fredoka", sans-serif;
+  --font-neon: "Tilt Neon", sans-serif;
+  --font-script: "Pinyon Script", cursive;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-noir);
+  color: var(--color-bone);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: #000;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #0e0e12; }
+::-webkit-scrollbar-thumb { background: #3a3325; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }
+
+.font-display { font-family: var(--font-display); }
+.font-accent { font-family: var(--font-accent); }
+
+.gold-text {
+  background: linear-gradient(105deg, #f5e7c1 0%, #c9a86a 35%, #8a6f3a 55%, #ecd9ab 75%, #c9a86a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 6s linear infinite;
+}
+@keyframes shine {
+  to { background-position: 200% center; }
+}
+
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.candle-glow {
+  box-shadow: 0 0 60px 10px rgba(201,168,106,0.25), 0 0 120px 30px rgba(201,168,106,0.12);
+}
+
+.flame {
+  transform-origin: 50% 100%;
+  animation: flicker 2.2s ease-in-out infinite;
+}
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+  25% { transform: scale(1.06, 1.12) rotate(1.5deg); opacity: 0.92; }
+  50% { transform: scale(0.96, 1.02) rotate(-2deg); opacity: 1; }
+  75% { transform: scale(1.04, 0.97) rotate(1deg); opacity: 0.9; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
+
+@keyframes mist {
+  0%, 100% { transform: translateX(-5%) scale(1); opacity: .5; }
+  50% { transform: translateX(5%) scale(1.08); opacity: .8; }
+}
+.animate-mist { animation: mist 12s ease-in-out infinite; }
+
+.card-border {
+  position: relative;
+  background: linear-gradient(#16161d, #101014) padding-box,
+    linear-gradient(135deg, rgba(201,168,106,.5), rgba(201,168,106,.08), rgba(201,168,106,.4)) border-box;
+  border: 1px solid transparent;
+}
+
+.hairline {
+  background: linear-gradient(90deg, transparent, rgba(201,168,106,.6), transparent);
+  height: 1px;
+}
+
+input, select, textarea {
+  color-scheme: dark;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+/* Páginas hermanas: cada una con su propio aspecto */
+.light-ui input,
+.light-ui select,
+.light-ui textarea {
+  color-scheme: light;
+}
+
+.neon-pink {
+  color: #ffe3f1;
+  text-shadow: 0 0 4px #fff, 0 0 14px #ff3d9a, 0 0 34px #ff3d9a, 0 0 70px rgba(255, 61, 154, 0.55);
+}
+.neon-orange {
+  color: #fff0e2;
+  text-shadow: 0 0 4px #fff, 0 0 12px #ff8a3d, 0 0 30px rgba(255, 138, 61, 0.8);
+}
+@keyframes neon-flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.55; }
+}
+.neon-flicker {
+  animation: neon-flicker 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-flicker {
+    animation: none;
+  }
+}

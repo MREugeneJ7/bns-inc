@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#000000" />
+<title>Chronometer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<style>
+  :root{
+    --ink:#ffffff;
+    --hair:rgba(255,255,255,.10);
+    --c-real:rgba(255,255,255,.55);
+    --c-target:#ffffff;
+    --c-current:#ffc46b;
+    --c-troll:#ff5a5f;
+    --c-tune:#7fd4e8;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:#000; overscroll-behavior:none; }
+  body{
+    font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    overflow:hidden;
+    cursor:default;
+  }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+
+  #stage{
+    position:fixed; inset:0;
+    display:grid; place-items:center;
+    touch-action:none;
+    background:
+      radial-gradient(120% 90% at 50% 46%, #0b0b0b 0%, #050505 42%, #000 78%),
+      #000;
+  }
+  #stage::after{
+    content:"";
+    position:absolute; inset:0;
+    pointer-events:none;
+    opacity:.035;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
+  }
+
+  .frame{
+    position:absolute; inset:0;
+    pointer-events:none;
+    padding:clamp(14px,3.4vh,30px) clamp(16px,4vw,40px);
+    display:flex; flex-direction:column; justify-content:space-between;
+    z-index:4;
+  }
+  .mark{
+    font-size:10px; letter-spacing:.34em; text-transform:uppercase;
+    color:rgba(255,255,255,.34); font-weight:500;
+    transition:color .3s ease;
+  }
+  body.face-tune .mark{ color:rgba(127,212,232,.55); }
+  body.face-gfx .mark{ color:rgba(255,196,107,.5); }
+  .rule{ height:1px; background:var(--hair); margin:10px 0; }
+
+  /* ---------- the card ---------- */
+  #card{
+    position:absolute; inset:0;
+    transform-origin:50% 50%;
+    will-change:transform;
+  }
+  #card.snap{ transition:transform .46s cubic-bezier(.22,.8,.2,1); }
+  .face{ position:absolute; inset:0; display:grid; place-items:center; transition:opacity .28s ease; opacity:0; }
+  #front{ opacity:1; }
+  #card.gesturing .face{ transition:none; }
+  body.face-gfx #front, body.face-tune #front{ opacity:0; }
+  body.face-gfx #gfx{ opacity:1; }
+  body.face-tune #tune{ opacity:1; }
+
+  .readout{
+    position:relative;
+    display:flex; flex-direction:column; align-items:center; gap:clamp(14px,3.2vh,30px);
+    padding:0 4vw;
+  }
+
+  #time{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric:tabular-nums;
+    font-feature-settings:"tnum" 1;
+    font-weight:500;
+    line-height:.86;
+    letter-spacing:-.035em;
+    display:flex; align-items:baseline;
+    white-space:nowrap;
+    color:var(--ink);
+    font-size:clamp(3.4rem, 19.5vmin, 13.5rem);
+    transition:opacity .55s cubic-bezier(.2,.7,.3,1), filter .55s ease, transform .35s cubic-bezier(.2,.8,.2,1);
+    opacity:.44;
+    filter:drop-shadow(0 0 0 rgba(255,255,255,0));
+  }
+  body.running #time{ opacity:1; filter:drop-shadow(0 0 34px rgba(255,255,255,.13)); }
+  body.drifting #time{ opacity:.78; filter:drop-shadow(0 0 20px rgba(255,255,255,.08)); }
+  body.stopped #time{ opacity:.92; }
+  #time.bump{ transform:scale(.985); }
+  #frac{ font-size:.5em; font-weight:300; letter-spacing:-.01em; opacity:.62; margin-left:.06em; }
+  #dot{ display:inline-block; transform:translateY(-.02em); padding:0 .02em; opacity:.55; font-weight:300; }
+  #dot.sectick{ opacity:1; text-shadow:0 0 22px rgba(255,255,255,.6); }
+
+  #verdict{
+    font-size:clamp(11px, 1.75vmin, 14px);
+    letter-spacing:.28em; text-transform:uppercase;
+    color:rgba(255,255,255,.82); font-weight:500;
+    min-height:1.4em; opacity:0; transform:translateY(5px);
+    transition:opacity .35s ease, transform .35s cubic-bezier(.2,.8,.2,1);
+    pointer-events:none; text-align:center;
+  }
+  body.stopped #verdict{ opacity:1; transform:translateY(0); }
+
+  .status{
+    display:flex; align-items:center; gap:12px;
+    font-size:11px; letter-spacing:.3em; text-transform:uppercase;
+    color:rgba(255,255,255,.42); font-weight:500;
+    transition:color .4s ease;
+  }
+  body.running .status, body.drifting .status{ color:rgba(255,255,255,.7); }
+  #pip{
+    width:7px; height:7px; border-radius:50%;
+    background:rgba(255,255,255,.28);
+    transition:background .3s ease, box-shadow .12s ease, transform .12s ease;
+  }
+  body.running #pip{ background:#fff; box-shadow:0 0 12px rgba(255,255,255,.8); }
+  body.drifting #pip{ background:rgba(255,255,255,.75); box-shadow:0 0 8px rgba(255,255,255,.5); }
+  #pip.beat{ transform:scale(1.55); box-shadow:0 0 20px rgba(255,255,255,1); }
+
+  #inertia{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    max-width:min(88vw, 480px); text-align:center;
+    opacity:0; transform:translateY(5px);
+    transition:opacity .4s ease, transform .4s cubic-bezier(.2,.8,.2,1);
+    pointer-events:none; min-height:2.7em;
+  }
+  body.inertia #inertia{ opacity:1; transform:translateY(0); }
+  .inertia-title{
+    font-family:"IBM Plex Mono", ui-monospace, monospace;
+    font-size:10px; letter-spacing:.22em; text-transform:uppercase;
+    color:rgba(255,255,255,.62); font-weight:500;
+  }
+  .inertia-quote{ font-size:12px; line-height:1.45; letter-spacing:.02em; color:rgba(255,255,255,.42); font-style:italic; }
+
+  .hint{
+    font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
+    color:rgba(255,255,255,.26);
+    display:flex; gap:16px; flex-wrap:wrap; justify-content:center;
+    transition:opacity .7s ease;
+  }
+  .hint b{ font-weight:500; color:rgba(255,255,255,.45); }
+  .hint.gone{ opacity:.55; }
+
+  .ring{
+    position:absolute; width:26px; height:26px; margin:-13px 0 0 -13px;
+    border-radius:50%; border:1px solid rgba(255,255,255,.5);
+    pointer-events:none; z-index:5;
+    animation:ripple .62s cubic-bezier(.15,.7,.3,1) forwards;
+  }
+  @keyframes ripple{ from{ transform:scale(.35); opacity:.55; } to{ transform:scale(11); opacity:0; } }
+
+  .foot{ display:flex; justify-content:space-between; align-items:flex-end; gap:20px; }
+  #serial{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:10px; letter-spacing:.18em; color:rgba(255,255,255,.22);
+    font-weight:300; white-space:nowrap;
+  }
+
+  /* ---------- shared caseback shell ---------- */
+  .panel{
+    width:min(94vw, 900px);
+    height:min(80vh, 660px);
+    height:min(80svh, 660px);
+    display:flex; flex-direction:column; gap:12px;
+    padding:clamp(10px, 2vw, 20px);
+    overflow:auto;
+    touch-action:pan-y;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,.18) transparent;
+  }
+  .panel::-webkit-scrollbar{ width:6px; }
+  .panel::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); border-radius:3px; }
+  .panel-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+  .panel-title{ font-size:11px; letter-spacing:.34em; text-transform:uppercase; color:rgba(255,255,255,.85); font-weight:500; }
+  .panel-sub{ font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.1em; color:rgba(255,255,255,.38); margin-top:6px; }
+  .panel-stats{
+    font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.1em;
+    color:rgba(255,255,255,.45); text-align:right; white-space:nowrap;
+  }
+
+  .btn{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:9.5px; letter-spacing:.2em; text-transform:uppercase;
+    color:rgba(255,255,255,.55);
+    background:transparent;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:999px;
+    padding:7px 13px;
+    cursor:pointer;
+    transition:color .2s ease, border-color .2s ease, background .2s ease, transform .12s cubic-bezier(.2,.8,.2,1);
+    white-space:nowrap;
+  }
+  .btn:hover{ color:#fff; border-color:rgba(255,255,255,.5); background:rgba(255,255,255,.06); }
+  .btn:active{ transform:scale(.95); }
+  .btn:focus-visible{ outline:1px solid var(--c-tune); outline-offset:2px; }
+  #tune .btn:hover{ border-color:rgba(127,212,232,.6); color:#dff6fc; }
+
+  /* ---------- graphics face ---------- */
+  #plot{ flex:1 1 auto; min-height:220px; width:100%; display:block; }
+  .legend{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+  .leg{ display:flex; flex-direction:column; gap:3px; padding:8px 10px; border:1px solid var(--hair); border-radius:6px; min-width:0;
+        transition:border-color .25s ease, background .25s ease; }
+  .leg:hover{ border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.03); }
+  .leg i{ display:block; width:18px; height:2px; background:var(--c); margin-bottom:3px; }
+  .leg span{ font-size:9.5px; letter-spacing:.26em; text-transform:uppercase; color:rgba(255,255,255,.42); }
+  .leg b{ font-family:"IBM Plex Mono", monospace; font-weight:500; font-size:clamp(13px, 2.4vmin, 18px);
+          color:rgba(255,255,255,.9); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .leg.current b{ color:var(--c-current); }
+  .leg.troll b{ color:var(--c-troll); }
+  @media (max-width:620px){
+    .legend{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .panel-head{ flex-direction:column; gap:8px; }
+    .panel-stats{ text-align:left; white-space:normal; }
+  }
+
+  /* ---------- adjustments face ---------- */
+  #tune{ --acc:var(--c-tune); }
+  .tune-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+  .cell{
+    border:1px solid var(--hair); border-radius:8px; padding:12px 13px 14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,0));
+    transition:border-color .25s ease, background .25s ease, transform .25s cubic-bezier(.2,.8,.2,1);
+    min-width:0;
+  }
+  .cell:hover{ border-color:rgba(127,212,232,.34); background:linear-gradient(180deg, rgba(127,212,232,.05), rgba(255,255,255,0)); }
+  .cell.wide{ grid-column:1 / -1; }
+  .cell-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:2px; }
+  .cell-label{ font-size:9.5px; letter-spacing:.28em; text-transform:uppercase; color:rgba(255,255,255,.5); font-weight:500; }
+  .cell-val{
+    font-family:"IBM Plex Mono", monospace; font-weight:500; font-size:clamp(15px,2.6vmin,20px);
+    color:#eafaff; font-variant-numeric:tabular-nums; letter-spacing:-.01em;
+    transition:color .2s ease, text-shadow .2s ease;
+  }
+  .cell.live .cell-val{ color:#fff; text-shadow:0 0 14px rgba(127,212,232,.65); }
+  .cell-note{ font-family:"IBM Plex Mono", monospace; font-size:9.5px; letter-spacing:.08em; color:rgba(255,255,255,.34); margin-top:6px; }
+  .cell-note em{ font-style:normal; color:rgba(127,212,232,.72); }
+
+  input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:22px; margin:6px 0 0; background:transparent; cursor:grab; display:block;
+    touch-action:none;
+  }
+  .seg button, .chip, .switch, .btn{ touch-action:none; }
+  input[type=range]:active{ cursor:grabbing; }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:2px; border-radius:2px;
+    background:linear-gradient(90deg, var(--acc) 0 var(--fill,50%), rgba(255,255,255,.15) var(--fill,50%) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px; height:13px; border-radius:50%;
+    background:#04141a; border:2px solid var(--acc); margin-top:-5.5px;
+    box-shadow:0 0 10px rgba(127,212,232,.45);
+    transition:transform .16s cubic-bezier(.2,.8,.2,1), box-shadow .16s ease;
+  }
+  input[type=range]:hover::-webkit-slider-thumb{ transform:scale(1.22); box-shadow:0 0 16px rgba(127,212,232,.7); }
+  input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.4); box-shadow:0 0 22px rgba(127,212,232,.9); }
+  input[type=range]::-moz-range-track{ height:2px; border-radius:2px; background:rgba(255,255,255,.15); }
+  input[type=range]::-moz-range-progress{ height:2px; border-radius:2px; background:var(--acc); }
+  input[type=range]::-moz-range-thumb{
+    width:11px; height:11px; border-radius:50%; background:#04141a; border:2px solid var(--acc);
+    box-shadow:0 0 10px rgba(127,212,232,.45);
+  }
+  input[type=range]:focus-visible{ outline:1px solid var(--acc); outline-offset:4px; border-radius:4px; }
+
+  .seg{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; margin-top:10px; }
+  .seg button{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; font-weight:500; letter-spacing:.06em;
+    color:rgba(255,255,255,.5); background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.12); border-radius:6px;
+    padding:9px 2px 8px; cursor:pointer; position:relative; overflow:hidden;
+    transition:color .2s ease, border-color .2s ease, background .2s ease, transform .14s cubic-bezier(.2,.8,.2,1);
+  }
+  .seg button::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
+    background:var(--acc); transform:scaleX(0); transform-origin:50%;
+    transition:transform .26s cubic-bezier(.2,.8,.2,1);
+  }
+  .seg button:hover{ color:#fff; border-color:rgba(127,212,232,.45); background:rgba(127,212,232,.07); }
+  .seg button:active{ transform:scale(.96); }
+  .seg button[aria-pressed="true"]{ color:#04141a; background:var(--acc); border-color:var(--acc); box-shadow:0 0 18px rgba(127,212,232,.35); }
+  .seg button[aria-pressed="true"]::after{ transform:scaleX(1); background:rgba(0,0,0,.35); }
+  .seg button:focus-visible{ outline:1px solid var(--acc); outline-offset:2px; }
+
+  .presets{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .chip{
+    font-family:"IBM Plex Mono", monospace; font-size:9.5px; letter-spacing:.14em;
+    color:rgba(255,255,255,.5); background:transparent;
+    border:1px solid rgba(255,255,255,.16); border-radius:999px; padding:5px 10px; cursor:pointer;
+    transition:color .2s ease, border-color .2s ease, background .2s ease, transform .12s ease;
+  }
+  .chip:hover{ color:#dff6fc; border-color:rgba(127,212,232,.55); background:rgba(127,212,232,.08); }
+  .chip:active{ transform:scale(.94); }
+  .chip[aria-pressed="true"]{ color:#04141a; background:var(--acc); border-color:var(--acc); }
+
+  .switch{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:9px; cursor:pointer; }
+  .switch + .switch{ margin-top:12px; }
+  .switch span{ font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  .track{
+    width:40px; height:20px; border-radius:999px; flex:0 0 auto; position:relative;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+    transition:background .25s ease, border-color .25s ease;
+  }
+  .track::after{
+    content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%;
+    background:rgba(255,255,255,.55);
+    transition:transform .28s cubic-bezier(.3,1.4,.4,1), background .25s ease, box-shadow .25s ease;
+  }
+  .switch[aria-pressed="true"] .track{ background:rgba(127,212,232,.22); border-color:rgba(127,212,232,.6); }
+  .switch[aria-pressed="true"] .track::after{ transform:translateX(20px); background:var(--acc); box-shadow:0 0 12px rgba(127,212,232,.8); }
+  .switch:hover span{ color:rgba(255,255,255,.8); }
+  .switch:focus-visible{ outline:1px solid var(--acc); outline-offset:3px; border-radius:6px; }
+
+  #wave{ width:100%; height:96px; display:block; margin-top:10px; }
+  .wave-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  #waveVal{ font-family:"IBM Plex Mono", monospace; font-size:13px; font-weight:500; color:var(--acc); font-variant-numeric:tabular-nums; }
+
+  .tune-foot{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding-top:2px; }
+  .tune-foot p{ font-family:"IBM Plex Mono", monospace; font-size:9.5px; letter-spacing:.12em; color:rgba(255,255,255,.3); margin:0; }
+  @media (max-width:560px){
+    .tune-grid{ grid-template-columns:minmax(0,1fr); }
+    .seg{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+  }
+</style>
+</head>
+<body>
+  <main id="stage" role="button" tabindex="0" aria-label="Chronometer. Tap to start or stop, double tap to reset, twist two fingers clockwise for the drift graph, counter-clockwise for adjustments.">
+    <div class="frame">
+      <header>
+        <div class="mark" id="mark">Chronometer</div>
+        <div class="rule"></div>
+      </header>
+      <footer class="foot">
+        <div class="rule" style="flex:1 1 auto; align-self:flex-end;"></div>
+        <div id="serial">1/100 s</div>
+      </footer>
+    </div>
+
+    <div id="card">
+      <!-- FRONT · the chronometer -->
+      <div id="front" class="face" aria-hidden="false">
+        <div class="readout">
+          <div id="verdict" aria-hidden="true">You took exactly:</div>
+
+          <div id="time" role="timer" aria-atomic="true">
+            <span id="main">00:00</span><span id="dot">.</span><span id="frac">00</span>
+          </div>
+
+          <div class="status">
+            <span id="pip" aria-hidden="true"></span>
+            <span id="state">Ready</span>
+          </div>
+
+          <div id="inertia" role="status" aria-live="polite">
+            <span class="inertia-title">Newton’s First Law · Law of Inertia</span>
+            <span class="inertia-quote">“An object in motion remains in motion unless acted upon by an external force.”</span>
+          </div>
+
+          <div class="hint" id="hint">
+            <span><b>Tap</b> start / stop</span>
+            <span><b>Double&nbsp;tap</b> reset</span>
+            <span><b>Twist&nbsp;↻</b> drift</span>
+            <span><b>Twist&nbsp;↺</b> tune</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BACK ↻ · drift vector graphics -->
+      <div id="gfx" class="face" aria-hidden="true" style="transform:rotate(180deg)">
+        <div class="panel" data-ui>
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Drift vector</div>
+              <div class="panel-sub" id="formula">x · real time &nbsp; y · modified time &nbsp; Δ = sin(t)·log₁₀(d)</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <div class="panel-stats" id="stats">0 jumps · log₁₀(d) ×0.00</div>
+              <button class="btn" id="gfxBack" type="button" aria-label="Return to the chronometer">↺ return</button>
+            </div>
+          </div>
+          <canvas id="plot"></canvas>
+          <div class="legend">
+            <div class="leg real"><i style="--c:var(--c-real)"></i><span>Real</span><b id="vReal">00:00.00</b></div>
+            <div class="leg target"><i style="--c:var(--c-target)"></i><span>Target</span><b id="vTarget">00:00.00</b></div>
+            <div class="leg current"><i style="--c:var(--c-current)"></i><span>Current</span><b id="vCurrent">00:00.00</b></div>
+            <div class="leg troll"><i style="--c:var(--c-troll)"></i><span>Troll · Σ</span><b id="vTroll">+0.00 s</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BACK ↺ · adjustments -->
+      <div id="tune" class="face" aria-hidden="true" style="transform:rotate(-180deg)">
+        <div class="panel" data-ui>
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Adjustments</div>
+              <div class="panel-sub">movement parameters · applied live</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <div class="panel-stats" id="expect">≈ ±0.00 s/min</div>
+              <button class="btn" id="tuneBack" type="button" aria-label="Return to the chronometer">↻ return</button>
+            </div>
+          </div>
+
+          <div class="tune-grid">
+            <!-- trigonometric formula -->
+            <div class="cell wide" id="cellTrig">
+              <div class="wave-head">
+                <div>
+                  <div class="cell-label">Trigonometric formula</div>
+                  <div class="cell-note" id="trigNote">f(t) = sin(t) · <em>E|f| 0.64</em></div>
+                </div>
+                <div class="cell-val" id="trigVal">sin</div>
+              </div>
+              <div class="seg" id="seg" role="group" aria-label="Trigonometric function">
+                <button type="button" data-fn="sin" aria-pressed="true">sin</button>
+                <button type="button" data-fn="cos" aria-pressed="false">cos</button>
+                <button type="button" data-fn="tan" aria-pressed="false">tan</button>
+                <button type="button" data-fn="sec" aria-pressed="false">sec</button>
+                <button type="button" data-fn="csc" aria-pressed="false">csc</button>
+                <button type="button" data-fn="cot" aria-pressed="false">cot</button>
+              </div>
+              <div class="wave-head" style="margin-top:10px;">
+                <div class="cell-note" id="waveNote" style="margin-top:0;">playhead rides the live modified clock</div>
+                <div style="display:flex; align-items:baseline; gap:8px;">
+                  <span class="cell-label" style="letter-spacing:.22em;">f(t)</span>
+                  <span id="waveVal">0.000</span>
+                </div>
+              </div>
+              <canvas id="wave" aria-hidden="true" style="margin-top:4px;"></canvas>
+            </div>
+
+            <!-- logarithm base -->
+            <div class="cell" id="cellBase">
+              <div class="cell-top">
+                <div class="cell-label">Logarithm base</div>
+                <div class="cell-val" id="baseVal">10</div>
+              </div>
+              <input id="baseRange" type="range" min="1.05" max="24" step="0.05" value="10" aria-label="Logarithm base" />
+              <div class="presets" role="group" aria-label="Base presets">
+                <button class="chip" type="button" data-base="2" aria-pressed="false">₂</button>
+                <button class="chip" type="button" data-base="e" aria-pressed="false">ₑ</button>
+                <button class="chip" type="button" data-base="10" aria-pressed="true">₁₀</button>
+                <button class="chip" type="button" data-base="16" aria-pressed="false">₁₆</button>
+              </div>
+              <div class="cell-note">multiplier now <em id="baseNote">×0.00</em> at d = <em id="distNote">1.0 s</em></div>
+            </div>
+
+            <!-- percent chance -->
+            <div class="cell" id="cellChance">
+              <div class="cell-top">
+                <div class="cell-label">Strike chance</div>
+                <div class="cell-val" id="chanceVal">17 %</div>
+              </div>
+              <input id="chanceRange" type="range" min="0" max="100" step="1" value="17" aria-label="Percent chance per tick" />
+              <div class="cell-note"><em id="chanceNote">0.17 strikes/s</em> · mean gap 5.9 s</div>
+            </div>
+
+            <!-- tick cadence -->
+            <div class="cell" id="cellTick">
+              <div class="cell-top">
+                <div class="cell-label">Roll cadence</div>
+                <div class="cell-val" id="tickVal">1000 ms</div>
+              </div>
+              <input id="tickRange" type="range" min="100" max="4000" step="50" value="1000" aria-label="Roll cadence in milliseconds" />
+              <div class="cell-note">how often the thread re-rolls the dice</div>
+            </div>
+
+            <!-- amplitude -->
+            <div class="cell" id="cellAmp">
+              <div class="cell-top">
+                <div class="cell-label">Amplitude</div>
+                <div class="cell-val" id="ampVal">1.00 ×</div>
+              </div>
+              <input id="ampRange" type="range" min="0.05" max="4" step="0.05" value="1" aria-label="Drift amplitude" />
+              <div class="cell-note">scales Δ before the warp chases it</div>
+            </div>
+
+            <!-- warp ceiling -->
+            <div class="cell" id="cellWarp">
+              <div class="cell-top">
+                <div class="cell-label">Warp ceiling</div>
+                <div class="cell-val" id="warpVal">3.5 ×</div>
+              </div>
+              <input id="warpRange" type="range" min="1.2" max="12" step="0.1" value="3.5" aria-label="Maximum warp rate" />
+              <div class="cell-note">fastest the dial may run while catching up</div>
+            </div>
+
+            <!-- toggles -->
+            <div class="cell" id="cellFlags">
+              <div class="cell-label">Behaviour</div>
+              <div class="switch" id="swInertia" role="switch" tabindex="0" aria-pressed="true" aria-label="Inertia coast on pause">
+                <span>Inertia coast on pause</span><i class="track"></i>
+              </div>
+              <div class="switch" id="swPolarity" role="switch" tabindex="0" aria-pressed="false" aria-label="Invert drift polarity">
+                <span>Invert polarity</span><i class="track"></i>
+              </div>
+              <div class="switch" id="swClamp" role="switch" tabindex="0" aria-pressed="true" aria-label="Clamp poles">
+                <span>Clamp poles ±4</span><i class="track"></i>
+              </div>
+            </div>
+
+            <div class="tune-foot wide" style="grid-column:1/-1;">
+              <p id="cfgLine">Δ = sin(t) · log₁₀(d) · 1.00 — 17 % / 1000 ms</p>
+              <button class="btn" id="restore" type="button">restore factory</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="live" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), card = $('card'), front = $('front'), gfx = $('gfx'), tune = $('tune');
+  const elVerdict = $('verdict'), elMain = $('main'), elFrac = $('frac'), elDot = $('dot');
+  const elState = $('state'), elPip = $('pip'), elHint = $('hint'), elTime = $('time'), live = $('live');
+  const elMark = $('mark'), elSerial = $('serial');
+  const plot = $('plot'), ctx = plot.getContext('2d');
+  const wave = $('wave'), wctx = wave.getContext('2d');
+  const vReal = $('vReal'), vTarget = $('vTarget'), vCurrent = $('vCurrent'), vTroll = $('vTroll');
+  const elStats = $('stats'), elFormula = $('formula'), elExpect = $('expect');
+
+  const DEFAULTS = { trig:'sin', logBase:10, chance:17, tickMs:1000, amp:1, maxWarp:3.5, invert:false, inertia:true, clamp:true };
+  const cfg = Object.assign({}, DEFAULTS);
+
+  const DOUBLE_MS = 320, TAP_HOLD_MS = 100;
+  const WARP_GAIN = 0.24, MIN_WARP = 0.30;
+  const DRIFT_MIN = 0.08, DRIFT_GAIN = 0.75, INERTIA_MIN_MS = 40;
+  const POLE_CLAMP = 4;
+  const SAMPLE_MS = 100, MAX_SAMPLES = 36000;
+  const COL = { real:'rgba(255,255,255,.55)', target:'#ffffff', current:'#ffc46b', troll:'#ff5a5f', tune:'#7fd4e8' };
+
+  // ---------- state ----------
+  let running = false, drifting = false, inertiaShown = false, stoppedFinal = false, frozen = false;
+  let displayMs = 0, targetBase = 0, realBase = 0, driftMs = 0;
+  let startedAt = 0, lastFrameAt = 0, lastToggle = -1e9, rafId = 0, lastSecond = -1, touched = false;
+  let samples = [], jumps = [], lastSampleAt = -1e9, yMaxSeen = 0, yMinSeen = 0, lastJump = null;
+  let cardRot = 0, face = 'front', chosenFace = 'gfx', gestureDelta = 0, plotDpr = 1, waveDpr = 1;
+  let ambientId = 0, lastAmbientText = 0;
+
+  const realMs   = now => realBase   + (running ? now - startedAt : 0);
+  const targetMs = now => targetBase + (running ? now - startedAt : 0);
+  const backVisible = () => face !== 'front';
+
+  // ---------- maths shared with the worker ----------
+  function trigVal(name, t, clamp){
+    const s = Math.sin(t), c = Math.cos(t);
+    let v;
+    switch (name){
+      case 'cos': v = c; break;
+      case 'tan': v = c === 0 ? Infinity * Math.sign(s) : s / c; break;
+      case 'sec': v = c === 0 ? Infinity : 1 / c; break;
+      case 'csc': v = s === 0 ? Infinity : 1 / s; break;
+      case 'cot': v = s === 0 ? Infinity * Math.sign(c) : c / s; break;
+      default: v = s;
+    }
+    if (!isFinite(v)) return clamp ? POLE_CLAMP : v;
+    return clamp ? Math.max(-POLE_CLAMP, Math.min(POLE_CLAMP, v)) : v;
+  }
+  const logBaseOf = (x, b) => Math.log(Math.max(1, x)) / Math.log(Math.max(1.0000001, b));
+  const distOrigin = (rMs, tMs) => Math.hypot(rMs / 1000, tMs / 1000);
+
+  // ---------- warp (running) ----------
+  function computeWarpRate(offsetSec){
+    const MAX = Math.max(1.05, cfg.maxWarp);
+    if (Math.abs(offsetSec) < 1e-6) return 1;
+    if (offsetSec > 0){
+      const span = MAX - 1;
+      return 1 + span * (1 - Math.exp(-(WARP_GAIN / span) * offsetSec));
+    }
+    const span = 1 - MIN_WARP;
+    return MIN_WARP + span * Math.exp((WARP_GAIN / span) * offsetSec);
+  }
+
+  function advanceClock(now){
+    if (!running) return;
+    const rawDt = Math.max(0, now - lastFrameAt);
+    lastFrameAt = now;
+    const tMs = Math.max(0, targetMs(now));
+    if (rawDt > 120){ displayMs = Math.max(0, displayMs + rawDt); return; }
+    let remaining = rawDt;
+    while (remaining > 0){
+      const h = remaining > 10 ? 10 : remaining;
+      remaining -= h;
+      const subTarget = Math.max(0, tMs - remaining);
+      const offsetMs = subTarget - displayMs;
+      if (Math.abs(offsetMs) < 0.01){ displayMs = subTarget; continue; }
+      const next = displayMs + h * computeWarpRate(offsetMs / 1000);
+      if ((offsetMs > 0 && next >= subTarget) || (offsetMs < 0 && next <= subTarget)) displayMs = subTarget;
+      else displayMs = Math.max(0, next);
+    }
+  }
+
+  // ---------- inertia (paused) ----------
+  function advanceDrift(now){
+    if (!drifting) return;
+    const rawDt = Math.min(50, Math.max(0, now - lastFrameAt));
+    lastFrameAt = now;
+    let remaining = rawDt;
+    while (remaining > 0){
+      const h = remaining > 10 ? 10 : remaining;
+      remaining -= h;
+      const offsetMs = targetBase - displayMs;
+      const distMs = Math.abs(offsetMs);
+      if (distMs <= 0.2){ displayMs = targetBase; finishStop(); return; }
+      const rate = Math.min(Math.max(1.05, cfg.maxWarp) - 1, DRIFT_MIN + DRIFT_GAIN * (distMs / 1000));
+      const step = h * rate;
+      if (step >= distMs){ displayMs = targetBase; finishStop(); return; }
+      displayMs = Math.max(0, displayMs + Math.sign(offsetMs) * step);
+    }
+  }
+
+  function finishStop(){
+    drifting = false; stoppedFinal = true;
+    cancelAnimationFrame(rafId); rafId = 0;
+    const now = performance.now();
+    recordSample(now, true);
+    const t = fmt(displayMs);
+    elMain.textContent = t.main; elFrac.textContent = t.frac;
+    paint();
+    if (backVisible()) updateBacks(now);
+    say('You took exactly: ' + t.main + '.' + t.frac);
+  }
+
+  // ---------- the troll thread ----------
+  const workerSource = `
+    const cfg = ${JSON.stringify(DEFAULTS)};
+    const POLE_CLAMP = 4;
+    let base = 0, realBase = 0, startedAt = 0, running = false, timer = null;
+    const target = () => base + (running ? performance.now() - startedAt : 0);
+    const real   = () => realBase + (running ? performance.now() - startedAt : 0);
+
+    function trigVal(name, t){
+      const s = Math.sin(t), c = Math.cos(t);
+      let v;
+      switch (name){
+        case 'cos': v = c; break;
+        case 'tan': v = c === 0 ? Infinity : s / c; break;
+        case 'sec': v = c === 0 ? Infinity : 1 / c; break;
+        case 'csc': v = s === 0 ? Infinity : 1 / s; break;
+        case 'cot': v = s === 0 ? Infinity : c / s; break;
+        default: v = s;
+      }
+      if (!isFinite(v)) return cfg.clamp ? POLE_CLAMP : 0;
+      return cfg.clamp ? Math.max(-POLE_CLAMP, Math.min(POLE_CLAMP, v)) : v;
+    }
+
+    function restart(){
+      if (timer) clearInterval(timer);
+      timer = setInterval(roll, cfg.tickMs);
+    }
+
+    function roll(){
+      if (!running) return;
+      if (Math.random() * 100 >= cfg.chance) return;
+      const t = target(), r = real();
+      const curr_secs = t / 1000;
+      const dist_origin = Math.hypot(r / 1000, curr_secs);
+      const mult = Math.log(Math.max(1, dist_origin)) / Math.log(Math.max(1.0000001, cfg.logBase));
+      let delta = trigVal(cfg.trig, curr_secs) * mult * cfg.amp;
+      if (cfg.invert) delta = -delta;
+      if (!isFinite(delta)) return;
+      const now = performance.now();
+      realBase = r;
+      base = Math.max(0, t + delta * 1000);
+      startedAt = now;
+      postMessage({ type:'adjust', delta: delta, mult: mult, dist: dist_origin, fn: cfg.trig });
+    }
+
+    onmessage = event => {
+      const d = event.data;
+      if (d.type === 'start'){ base = d.base; realBase = d.real; startedAt = performance.now(); running = true; }
+      else if (d.type === 'stop'){ base = d.base; realBase = d.real; running = false; }
+      else if (d.type === 'reset'){ base = 0; realBase = 0; running = false; }
+      else if (d.type === 'config'){
+        const tickChanged = d.cfg.tickMs !== cfg.tickMs;
+        Object.assign(cfg, d.cfg);
+        if (tickChanged) restart();
+      }
+    };
+    restart();
+  `;
+
+  let thread = null;
+  try {
+    const url = URL.createObjectURL(new Blob([workerSource], { type:'text/javascript' }));
+    thread = new Worker(url);
+    URL.revokeObjectURL(url);
+    thread.onmessage = event => {
+      const d = event.data;
+      if (d.type !== 'adjust' || !running) return;
+      const now = performance.now();
+      const cur = targetMs(now);
+      const next = Math.max(0, cur + d.delta * 1000);
+      const applied = next - cur;
+      recordSample(now, true);
+      targetBase += applied;
+      driftMs += applied;
+      lastJump = { r: realMs(now) / 1000, from: cur / 1000, to: next / 1000, delta: applied / 1000, mult: d.mult, fn: d.fn };
+      jumps.push(lastJump);
+      recordSample(now, true);
+      if (backVisible()) updateBacks(now);
+    };
+  } catch (_) { thread = null; }
+
+  function pushConfig(){ if (thread) thread.postMessage({ type:'config', cfg: JSON.parse(JSON.stringify(cfg)) }); }
+
+  // ---------- telemetry ----------
+  function recordSample(now, force){
+    if (!force && now - lastSampleAt < SAMPLE_MS) return;
+    lastSampleAt = now;
+    const r = realMs(now) / 1000, t = targetMs(now) / 1000, c = displayMs / 1000, d = driftMs / 1000;
+    samples.push({ r, t, c, d, j: !!force });
+    if (t > yMaxSeen) yMaxSeen = t;
+    if (c > yMaxSeen) yMaxSeen = c;
+    if (d > yMaxSeen) yMaxSeen = d;
+    if (d < yMinSeen) yMinSeen = d;
+    if (samples.length > MAX_SAMPLES) compactSamples();
+  }
+  function compactSamples(){
+    const half = samples.length >> 1, keep = [];
+    for (let i = 0; i < samples.length; i++){
+      const s = samples[i];
+      if (i >= half || s.j || (i & 1) === 0) keep.push(s);
+    }
+    samples = keep;
+  }
+
+  // ---------- formatting ----------
+  function fmt(ms){
+    const cs = Math.floor(Math.max(0, ms) / 10);
+    const h = Math.floor(cs / 360000), m = Math.floor(cs / 6000) % 60, s = Math.floor(cs / 100) % 60, c = cs % 100;
+    const p2 = n => String(n).padStart(2, '0');
+    return { main:(h > 0 ? p2(h) + ':' : '') + p2(m) + ':' + p2(s), frac:p2(c), second:Math.floor(ms / 1000) };
+  }
+  const fmtStr = ms => { const t = fmt(ms); return t.main + '.' + t.frac; };
+  const signed = (sec, unit) => (sec < 0 ? '−' : '+') + Math.abs(sec).toFixed(2) + (unit || '');
+  const baseSub = b => {
+    if (Math.abs(b - Math.E) < 0.02) return 'ₑ';
+    if (Math.abs(b - 2) < 0.02) return '₂';
+    if (Math.abs(b - 10) < 0.02) return '₁₀';
+    if (Math.abs(b - 16) < 0.02) return '₁₆';
+    return '(' + b.toFixed(2) + ')';
+  };
+
+  // ---------- render ----------
+  function render(){
+    const now = performance.now();
+    if (running && !frozen) advanceClock(now);
+    else if (drifting) advanceDrift(now);
+    if (running || drifting) recordSample(now, false);
+
+    const t = fmt(displayMs);
+    elMain.textContent = t.main; elFrac.textContent = t.frac;
+
+    if ((running || drifting) && t.second !== lastSecond){
+      lastSecond = t.second;
+      elPip.classList.add('beat'); elDot.classList.add('sectick');
+      setTimeout(() => { elPip.classList.remove('beat'); elDot.classList.remove('sectick'); }, 110);
+    }
+    if (backVisible()) updateBacks(now);
+    if (running || drifting) rafId = requestAnimationFrame(render);
+  }
+
+  function paint(){
+    document.body.classList.toggle('running', running);
+    document.body.classList.toggle('drifting', drifting);
+    document.body.classList.toggle('inertia', inertiaShown);
+    document.body.classList.toggle('stopped', stoppedFinal);
+    elVerdict.setAttribute('aria-hidden', stoppedFinal ? 'false' : 'true');
+    elState.textContent = running ? 'Running' : drifting ? 'Coasting · Inertia' : (stoppedFinal || displayMs > 0) ? 'Hold' : 'Ready';
+  }
+
+  // ---------- controls ----------
+  function start(at){
+    running = true; drifting = false; inertiaShown = false; stoppedFinal = false; frozen = false;
+    startedAt = at; lastFrameAt = at; lastSecond = -1;
+    if (thread) thread.postMessage({ type:'start', base: targetBase, real: realBase });
+    recordSample(at, true);
+    paint();
+    cancelAnimationFrame(rafId); rafId = requestAnimationFrame(render);
+    say('Started');
+  }
+
+  function stop(at){
+    if (!frozen) advanceClock(at);
+    frozen = false;
+    const ran = Math.max(0, at - startedAt);
+    targetBase = Math.max(0, targetBase + ran);
+    realBase += ran;
+    running = false;
+    if (thread) thread.postMessage({ type:'stop', base: targetBase, real: realBase });
+    cancelAnimationFrame(rafId); rafId = 0;
+    recordSample(at, true);
+
+    const diffMs = targetBase - displayMs;
+    if (cfg.inertia && Math.abs(diffMs) >= INERTIA_MIN_MS){
+      drifting = true; inertiaShown = true; stoppedFinal = false;
+      lastFrameAt = performance.now();
+      paint();
+      say('Newton’s First Law of Inertia: An object in motion remains in motion unless acted upon by an external force.');
+      rafId = requestAnimationFrame(render);
+    } else {
+      displayMs = targetBase;
+      inertiaShown = false;
+      finishStop();
+    }
+  }
+
+  function reset(){
+    running = false; drifting = false; inertiaShown = false; stoppedFinal = false; frozen = false;
+    displayMs = 0; targetBase = 0; realBase = 0; driftMs = 0;
+    samples = []; jumps = []; lastJump = null; yMaxSeen = 0; yMinSeen = 0; lastSampleAt = -1e9;
+    if (thread) thread.postMessage({ type:'reset' });
+    cancelAnimationFrame(rafId); rafId = 0;
+    lastSecond = -1;
+    render(); paint();
+    if (backVisible()) updateBacks(performance.now());
+    say('Reset');
+  }
+
+  function toggle(at){
+    if (!touched){ touched = true; elHint.classList.add('gone'); }
+    bump();
+    if (at - lastToggle < DOUBLE_MS){
+      reset(); lastToggle = -1e9; haptic([10, 40, 18]); return;
+    }
+    lastToggle = at;
+    running ? stop(at) : start(at);
+  }
+
+  function say(msg){ live.textContent = msg; }
+  function bump(){ elTime.classList.add('bump'); setTimeout(() => elTime.classList.remove('bump'), 340); }
+  function ripple(x, y){
+    const r = document.createElement('span');
+    r.className = 'ring'; r.style.left = x + 'px'; r.style.top = y + 'px';
+    stage.appendChild(r); r.addEventListener('animationend', () => r.remove());
+  }
+  function haptic(p){ if (navigator.vibrate){ try { navigator.vibrate(p); } catch(e){} } }
+
+  // ---------- pointers: taps + two-finger twist ----------
+  const pointers = new Map();
+  let pending = null, gesture = null;
+  const angleBetween = (p, q) => Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI;
+
+  function onDown(e){
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const inUI = !!e.target.closest('[data-ui]');      // controls keep their own pointer semantics
+    if (!inUI){
+      e.preventDefault();
+      try { stage.setPointerCapture(e.pointerId); } catch(_){}
+      ripple(e.clientX, e.clientY);
+    }
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY, ui:inUI });
+
+    if (pointers.size === 1){
+      if (inUI) return;                                 // no chronometer tap from inside a panel
+      const at = performance.now();
+      haptic(running ? 14 : 8);
+      if (running){ advanceClock(at); frozen = true; }
+      pending = { id:e.pointerId, at, timer:setTimeout(commitPending, TAP_HOLD_MS) };
+    } else if (pointers.size === 2 && !gesture){
+      if (pending){ clearTimeout(pending.timer); pending = null; }
+      if (frozen){ frozen = false; lastFrameAt = performance.now(); }
+      const [a, b] = [...pointers.keys()];
+      gesture = { a, b, prevAngle: angleBetween(pointers.get(a), pointers.get(b)) };
+      gestureDelta = 0;
+      card.classList.add('gesturing'); card.classList.remove('snap');
+      haptic(6);
+    }
+  }
+
+  function onMove(e){
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (gesture && pointers.has(gesture.a) && pointers.has(gesture.b)){
+      const ang = angleBetween(pointers.get(gesture.a), pointers.get(gesture.b));
+      let d = ang - gesture.prevAngle;
+      while (d > 180) d -= 360;
+      while (d < -180) d += 360;
+      gesture.prevAngle = ang;
+      gestureDelta += d;
+      cardRot += d;
+      // clockwise twist → graphics, counter-clockwise → adjustments
+      if (Math.abs(gestureDelta) > 4){
+        const want = gestureDelta > 0 ? 'gfx' : 'tune';
+        if (want !== chosenFace){ chosenFace = want; setFace(want, true); }
+      }
+      applyRotation(false);
+    }
+  }
+
+  function onUp(e){
+    if (!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+    if (gesture){ if (e.pointerId === gesture.a || e.pointerId === gesture.b) endGesture(); return; }
+    if (pending && pending.id === e.pointerId) commitPending();
+  }
+
+  function commitPending(){
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    const p = pending; pending = null;
+    if (frozen){ frozen = false; }
+    toggle(p.at);
+  }
+
+  function endGesture(){
+    gesture = null;
+    card.classList.remove('gesturing'); card.classList.add('snap');
+    const steps = Math.round(cardRot / 180);
+    cardRot = steps * 180;
+    setFace(steps % 2 === 0 ? 'front' : chosenFace, false);
+    applyRotation(true);
+    haptic(face === 'front' ? 8 : [8, 30, 12]);
+  }
+
+  function applyRotation(snap){
+    card.style.transform = 'rotate(' + cardRot + 'deg) scale(' + (snap ? 1 : 0.97) + ')';
+    const m = ((cardRot % 360) + 360) % 360;
+    const toBack = 1 - Math.abs(m - 180) / 180;
+    const k = Math.min(1, Math.max(0, (toBack - 0.39) / 0.22));
+    if (snap){
+      front.style.opacity = ''; gfx.style.opacity = ''; tune.style.opacity = '';
+    } else {
+      front.style.opacity = String(1 - k);
+      gfx.style.opacity = chosenFace === 'gfx' ? String(k) : '0';
+      tune.style.opacity = chosenFace === 'tune' ? String(k) : '0';
+    }
+    const was = backVisible();
+    if (!was && k > 0.02) setFace(chosenFace, true);
+    if (backVisible() && (running || drifting)) updateBacks(performance.now());
+  }
+
+  function setFace(f, provisional){
+    face = f;
+    if (f !== 'front') chosenFace = f;
+    document.body.classList.toggle('face-gfx', f === 'gfx');
+    document.body.classList.toggle('face-tune', f === 'tune');
+    front.setAttribute('aria-hidden', f === 'front' ? 'false' : 'true');
+    gfx.setAttribute('aria-hidden', f === 'gfx' ? 'false' : 'true');
+    tune.setAttribute('aria-hidden', f === 'tune' ? 'false' : 'true');
+    elMark.textContent = f === 'gfx' ? 'Chronometer · Caseback' : f === 'tune' ? 'Chronometer · Movement' : 'Chronometer';
+    elSerial.textContent = f === 'gfx' ? 'x real · y modified' : f === 'tune' ? 'adjustments · live' : '1/100 s';
+    if (f === 'gfx'){ resizePlot(); updateBacks(performance.now()); }
+    if (f === 'tune'){ resizeWave(); drawWave(performance.now()); }
+    if (!provisional) ensureAmbient();
+  }
+
+  function flipTo(f){
+    if (pending) commitPending();
+    pointers.clear();
+    if (gesture) gesture = null;
+    card.classList.remove('gesturing'); card.classList.add('snap');
+    const steps = Math.round(cardRot / 180);
+    if (f === 'front'){ cardRot = steps % 2 === 0 ? cardRot : cardRot + (cardRot > 0 ? -180 : 180); }
+    else {
+      chosenFace = f;
+      const dir = f === 'gfx' ? 1 : -1;
+      if (steps % 2 === 0) cardRot += 180 * dir;
+      else cardRot = Math.round(cardRot / 180) * 180 + (Math.sign(cardRot) === dir ? 0 : 360 * dir);
+    }
+    setFace(f, false);
+    applyRotation(true);
+    haptic([8, 30, 12]);
+  }
+
+  stage.addEventListener('pointerdown', onDown, { passive:false });
+  stage.addEventListener('pointermove', onMove);
+  stage.addEventListener('pointerup', onUp);
+  stage.addEventListener('pointercancel', onUp);
+  stage.addEventListener('contextmenu', e => e.preventDefault());
+  stage.addEventListener('dragstart', e => e.preventDefault());
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  window.addEventListener('blur', () => { if (pending) commitPending(); pointers.clear(); if (gesture) endGesture(); });
+  $('gfxBack').addEventListener('click', () => flipTo('front'));
+  $('tuneBack').addEventListener('click', () => flipTo('front'));
+
+  addEventListener('keydown', e => {
+    if (e.repeat) return;
+    const inUI = e.target.closest && e.target.closest('[data-ui]');
+    if (e.code === 'KeyF'){ e.preventDefault(); flipTo(face === 'gfx' ? 'front' : 'gfx'); return; }
+    if (e.code === 'KeyG'){ e.preventDefault(); flipTo(face === 'tune' ? 'front' : 'tune'); return; }
+    if (inUI) return;
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyK'){
+      e.preventDefault();
+      if (pending || gesture) return;
+      const b = stage.getBoundingClientRect();
+      ripple(b.left + b.width / 2, b.top + b.height / 2);
+      haptic(running ? 14 : 8);
+      toggle(performance.now());
+    } else if (e.code === 'KeyR' || e.code === 'Escape' || e.code === 'Backspace'){
+      e.preventDefault();
+      if (e.code === 'Escape' && face !== 'front'){ flipTo('front'); return; }
+      reset();
+      if (!touched){ touched = true; elHint.classList.add('gone'); }
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (running || drifting){ cancelAnimationFrame(rafId); rafId = requestAnimationFrame(render); }
+    else render();
+  });
+
+  // ---------- adjustments UI ----------
+  function meanAbs(fn){
+    let sum = 0; const N = 1200;
+    for (let i = 0; i < N; i++){
+      const v = trigVal(fn, (i / N) * Math.PI * 2, cfg.clamp);
+      if (isFinite(v)) sum += Math.abs(v);
+    }
+    return sum / N;
+  }
+  function expectedPerMin(now){
+    const d = distOrigin(realMs(now), targetMs(now));
+    const mult = logBaseOf(d, cfg.logBase);
+    const v = (60000 / cfg.tickMs) * (cfg.chance / 100) * meanAbs(cfg.trig) * cfg.amp * mult;
+    return isFinite(v) ? Math.min(9999, v) : 9999;
+  }
+
+  function syncFill(input){
+    const min = parseFloat(input.min), max = parseFloat(input.max), v = parseFloat(input.value);
+    input.style.setProperty('--fill', ((v - min) / (max - min) * 100).toFixed(2) + '%');
+  }
+  function flash(cellId){
+    const c = $(cellId); if (!c) return;
+    c.classList.add('live'); clearTimeout(c._t); c._t = setTimeout(() => c.classList.remove('live'), 420);
+  }
+
+  function formulaText(){
+    return 'Δ = ' + (cfg.invert ? '−' : '') + (cfg.amp !== 1 ? cfg.amp.toFixed(2) + '·' : '') +
+           cfg.trig + '(t) · log' + baseSub(cfg.logBase) + '(d)';
+  }
+
+  function syncPanel(){
+    const now = performance.now();
+    const d = distOrigin(realMs(now), targetMs(now));
+    const mult = logBaseOf(d, cfg.logBase);
+
+    $('baseVal').textContent = Math.abs(cfg.logBase - Math.E) < 0.02 ? 'e' : cfg.logBase.toFixed(2);
+    $('baseNote').textContent = '×' + mult.toFixed(2);
+    $('distNote').textContent = d.toFixed(1) + ' s';
+    $('chanceVal').textContent = cfg.chance + ' %';
+    const perSec = (cfg.chance / 100) * (1000 / cfg.tickMs);
+    $('chanceNote').textContent = cfg.chance === 0 ? 'dormant' : perSec.toFixed(2) + ' strikes/s';
+    $('tickVal').textContent = cfg.tickMs + ' ms';
+    $('ampVal').textContent = cfg.amp.toFixed(2) + ' ×';
+    $('warpVal').textContent = cfg.maxWarp.toFixed(1) + ' ×';
+    $('trigVal').textContent = cfg.trig;
+
+    const mRaw = meanAbs(cfg.trig);
+    const mAbs = isFinite(mRaw) ? Math.min(999, mRaw) : 999;
+    const pole = ['tan', 'sec', 'csc', 'cot'].indexOf(cfg.trig) >= 0;
+    $('trigNote').innerHTML = 'f(t) = ' + cfg.trig + '(t) · <em>E|f| ' + mAbs.toFixed(2) + '</em>' +
+      (pole ? (cfg.clamp ? ' · poles clamped ±4' : ' · <em>unclamped poles</em>') : '');
+    $('waveNote').textContent = pole
+      ? (cfg.clamp ? 'clamped at ±4 — poles flatten instead of exploding' : 'unclamped — poles spike off-scale')
+      : 'playhead rides the live modified clock';
+
+    $('expect').textContent = '≈ ±' + expectedPerMin(now).toFixed(2) + ' s/min';
+    $('cfgLine').textContent = formulaText().replace('Δ = ', '') + ' — ' + cfg.chance + ' % / ' + cfg.tickMs + ' ms';
+    elFormula.innerHTML = 'x · real time &nbsp; y · modified time &nbsp; ' + formulaText();
+
+    ['baseRange', 'chanceRange', 'tickRange', 'ampRange', 'warpRange'].forEach(id => syncFill($(id)));
+    document.querySelectorAll('#seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fn === cfg.trig)));
+    document.querySelectorAll('.chip[data-base]').forEach(b => {
+      const v = b.dataset.base === 'e' ? Math.E : parseFloat(b.dataset.base);
+      b.setAttribute('aria-pressed', String(Math.abs(v - cfg.logBase) < 0.02));
+    });
+    $('swInertia').setAttribute('aria-pressed', String(cfg.inertia));
+    $('swPolarity').setAttribute('aria-pressed', String(cfg.invert));
+    $('swClamp').setAttribute('aria-pressed', String(cfg.clamp));
+
+    pushConfig();
+    if (backVisible()) updateBacks(now);
+  }
+
+  function bindRange(id, key, cellId, parse){
+    const el = $(id);
+    el.addEventListener('input', () => {
+      cfg[key] = parse ? parse(el.value) : parseFloat(el.value);
+      syncFill(el); flash(cellId); syncPanel();
+    });
+    el.addEventListener('change', () => haptic(6));
+    syncFill(el);
+  }
+  bindRange('baseRange', 'logBase', 'cellBase');
+  bindRange('chanceRange', 'chance', 'cellChance', v => parseInt(v, 10));
+  bindRange('tickRange', 'tickMs', 'cellTick', v => parseInt(v, 10));
+  bindRange('ampRange', 'amp', 'cellAmp');
+  bindRange('warpRange', 'maxWarp', 'cellWarp');
+
+  $('seg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-fn]'); if (!b) return;
+    cfg.trig = b.dataset.fn; flash('cellTrig'); haptic(8); syncPanel(); drawWave(performance.now());
+  });
+  document.querySelectorAll('.chip[data-base]').forEach(b => {
+    b.addEventListener('click', () => {
+      const v = b.dataset.base === 'e' ? Math.E : parseFloat(b.dataset.base);
+      cfg.logBase = v; $('baseRange').value = String(v);
+      flash('cellBase'); haptic(8); syncPanel();
+    });
+  });
+  function bindSwitch(id, key, cellId){
+    const el = $(id);
+    const flip = () => { cfg[key] = !cfg[key]; flash(cellId); haptic(cfg[key] ? 10 : 6); syncPanel(); };
+    el.addEventListener('click', flip);
+    el.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); e.stopPropagation(); flip(); } });
+  }
+  bindSwitch('swInertia', 'inertia', 'cellFlags');
+  bindSwitch('swPolarity', 'invert', 'cellFlags');
+  bindSwitch('swClamp', 'clamp', 'cellFlags');
+  $('restore').addEventListener('click', () => {
+    Object.assign(cfg, DEFAULTS);
+    $('baseRange').value = String(DEFAULTS.logBase);
+    $('chanceRange').value = String(DEFAULTS.chance);
+    $('tickRange').value = String(DEFAULTS.tickMs);
+    $('ampRange').value = String(DEFAULTS.amp);
+    $('warpRange').value = String(DEFAULTS.maxWarp);
+    haptic([8, 40, 10]); syncPanel(); drawWave(performance.now());
+  });
+
+  // ---------- ambient loop (faces that breathe while idle) ----------
+  function ensureAmbient(){
+    if (ambientId) return;
+    const step = () => {
+      try {
+        const now = performance.now();
+        if (face === 'tune'){
+          drawWave(now);
+          if (now - lastAmbientText > 140){ lastAmbientText = now; $('expect').textContent = '≈ ±' + expectedPerMin(now).toFixed(2) + ' s/min'; }
+        } else if (face === 'gfx' && !(running || drifting)){
+          if (now - lastAmbientText > 200){ lastAmbientText = now; updateBacks(now); }
+        }
+      } catch (err) { /* never let a paint error kill the loop */ }
+      ambientId = requestAnimationFrame(step);
+    };
+    ambientId = requestAnimationFrame(step);
+  }
+
+  // ---------- canvases ----------
+  function sizeCanvas(cv, c2d){
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (w < 2 || h < 2) return null;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.round(w * dpr), H = Math.round(h * dpr);
+    if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+    return dpr;
+  }
+  function resizePlot(){ plotDpr = sizeCanvas(plot, ctx) || plotDpr; }
+  function resizeWave(){ waveDpr = sizeCanvas(wave, wctx) || waveDpr; }
+
+  function updateBacks(now){
+    const rMs = realMs(now), tMs = targetMs(now);
+    vReal.textContent = fmtStr(rMs);
+    vTarget.textContent = fmtStr(tMs);
+    vCurrent.textContent = fmtStr(displayMs);
+    vTroll.textContent = signed(driftMs / 1000, ' s');
+    const d = distOrigin(rMs, tMs);
+    elStats.textContent = jumps.length + (jumps.length === 1 ? ' jump' : ' jumps')
+      + ' · log' + baseSub(cfg.logBase) + '(d) ×' + logBaseOf(d, cfg.logBase).toFixed(2)
+      + (lastJump ? ' · last ' + signed(lastJump.delta, ' s') + ' ' + lastJump.fn : '');
+    if (face === 'gfx') drawGraph(now);
+  }
+
+  function drawWave(now){
+    const W = wave.width, H = wave.height;
+    if (!W || !H) return;
+    const dpr = waveDpr;
+    wctx.clearRect(0, 0, W, H);
+    const padL = 26 * dpr, padR = 10 * dpr, padT = 10 * dpr, padB = 16 * dpr;
+    const pw = W - padL - padR, ph = H - padT - padB;
+    if (pw < 20 || ph < 10) return;
+    const SPAN = Math.PI * 4;
+    const cap = cfg.clamp ? POLE_CLAMP : 6;
+    const X = t => padL + (t / SPAN) * pw;
+    const Y = v => padT + ph / 2 - (Math.max(-cap, Math.min(cap, v)) / cap) * (ph / 2);
+
+    wctx.lineWidth = dpr;
+    wctx.strokeStyle = 'rgba(255,255,255,.07)';
+    for (let i = 0; i <= 4; i++){
+      const x = X(i * Math.PI);
+      wctx.beginPath(); wctx.moveTo(x, padT); wctx.lineTo(x, padT + ph); wctx.stroke();
+    }
+    wctx.strokeStyle = 'rgba(255,255,255,.22)';
+    wctx.beginPath(); wctx.moveTo(padL, Y(0)); wctx.lineTo(padL + pw, Y(0)); wctx.stroke();
+
+    wctx.font = (9 * dpr) + 'px "IBM Plex Mono", monospace';
+    wctx.fillStyle = 'rgba(255,255,255,.34)';
+    wctx.textAlign = 'center'; wctx.textBaseline = 'top';
+    ['0', 'π', '2π', '3π', '4π'].forEach((lab, i) => wctx.fillText(lab, X(i * Math.PI), padT + ph + 4 * dpr));
+    wctx.textAlign = 'right'; wctx.textBaseline = 'middle';
+    wctx.fillText('+' + cap, padL - 5 * dpr, Y(cap));
+    wctx.fillText('−' + cap, padL - 5 * dpr, Y(-cap));
+
+    // pole markers
+    const fn = cfg.trig;
+    if (fn === 'tan' || fn === 'sec' || fn === 'csc' || fn === 'cot'){
+      wctx.strokeStyle = 'rgba(255,90,95,.4)';
+      wctx.setLineDash([2 * dpr, 3 * dpr]);
+      for (let k = 0; k <= 8; k++){
+        const t = (fn === 'tan' || fn === 'sec') ? (k + 0.5) * Math.PI : k * Math.PI;
+        if (t > SPAN) break;
+        wctx.beginPath(); wctx.moveTo(X(t), padT); wctx.lineTo(X(t), padT + ph); wctx.stroke();
+      }
+      wctx.setLineDash([]);
+    }
+
+    // curve + fill
+    const N = 720;
+    const path = new Path2D();
+    const fill = new Path2D();
+    fill.moveTo(X(0), Y(0));
+    for (let i = 0; i <= N; i++){
+      const t = (i / N) * SPAN;
+      const v = trigVal(fn, t, cfg.clamp);
+      const x = X(t), y = Y(isFinite(v) ? v : cap);
+      if (i === 0) path.moveTo(x, y); else path.lineTo(x, y);
+      fill.lineTo(x, y);
+    }
+    fill.lineTo(X(SPAN), Y(0)); fill.closePath();
+    wctx.fillStyle = 'rgba(127,212,232,.09)'; wctx.fill(fill);
+    wctx.strokeStyle = COL.tune; wctx.lineWidth = 1.6 * dpr;
+    wctx.lineJoin = 'round'; wctx.stroke(path);
+
+    // playhead
+    const tNow = (targetMs(now) / 1000) % SPAN;
+    const px = X(tNow), pv = trigVal(fn, tNow, cfg.clamp);
+    const py = Y(isFinite(pv) ? pv : cap);
+    wctx.strokeStyle = 'rgba(255,255,255,.3)'; wctx.lineWidth = dpr;
+    wctx.beginPath(); wctx.moveTo(px, padT); wctx.lineTo(px, padT + ph); wctx.stroke();
+    wctx.beginPath(); wctx.arc(px, py, 3.4 * dpr, 0, Math.PI * 2);
+    wctx.fillStyle = '#fff'; wctx.shadowColor = 'rgba(255,255,255,.9)'; wctx.shadowBlur = 10 * dpr; wctx.fill();
+    wctx.shadowBlur = 0;
+    const shown = !isFinite(pv) ? cap * Math.sign(pv || 1) : Math.max(-999, Math.min(999, pv));
+    const wv = $('waveVal');
+    if (wv) wv.textContent = Math.abs(shown) > 99 ? shown.toFixed(0) : shown.toFixed(3);
+  }
+
+  function niceStep(range, maxTicks){
+    const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
+    for (const s of steps){ if (range / s <= maxTicks) return s; }
+    return 7200 * Math.ceil(range / maxTicks / 7200);
+  }
+  function tickLabel(v, step){
+    const neg = v < -1e-9, a = Math.abs(v);
+    let s;
+    if (step < 1) s = a.toFixed(1) + 's';
+    else if (step < 60) s = Math.round(a) + 's';
+    else { const m = Math.floor(a / 60), sec = Math.round(a - m * 60); s = m + ':' + String(sec).padStart(2, '0'); }
+    return (neg ? '−' : '') + s;
+  }
+
+  function drawGraph(now){
+    const W = plot.width, H = plot.height;
+    if (!W || !H) return;
+    const dpr = plotDpr;
+    ctx.clearRect(0, 0, W, H);
+    const padL = 48 * dpr, padR = 18 * dpr, padT = 16 * dpr, padB = 30 * dpr;
+    const pw = W - padL - padR, ph = H - padT - padB;
+    if (pw < 20 || ph < 20) return;
+
+    const R = realMs(now) / 1000, T = targetMs(now) / 1000, C = displayMs / 1000, D = driftMs / 1000;
+    const xMax = Math.max(10, R * 1.04);
+    let yTop = Math.max(xMax, yMaxSeen, T, C, D), yBot = Math.min(0, yMinSeen, D);
+    const pad = (yTop - yBot) * 0.05 || 0.5;
+    yTop += pad; yBot -= pad;
+    const X = v => padL + (v / xMax) * pw;
+    const Y = v => padT + ph - ((v - yBot) / (yTop - yBot)) * ph;
+    const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+    const dot = (x, y, r, color) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); };
+
+    ctx.lineWidth = dpr;
+    ctx.font = (10 * dpr) + 'px "IBM Plex Mono", monospace';
+    const sx = niceStep(xMax, 7);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let v = 0; v <= xMax + 1e-9; v += sx){
+      const x = X(v);
+      ctx.strokeStyle = 'rgba(255,255,255,.07)'; line(x, padT, x, padT + ph);
+      ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.fillText(tickLabel(v, sx), x, padT + ph + 8 * dpr);
+    }
+    const sy = niceStep(yTop - yBot, 6);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let v = Math.ceil(yBot / sy) * sy; v <= yTop + 1e-9; v += sy){
+      const y = Y(v);
+      ctx.strokeStyle = Math.abs(v) < 1e-9 ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.07)';
+      line(padL, y, padL + pw, y);
+      ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.fillText(tickLabel(v, sy), padL - 8 * dpr, y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,.16)';
+    ctx.strokeRect(padL + .5, padT + .5, pw - 1, ph - 1);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(padL, padT, pw, ph); ctx.clip();
+    ctx.setLineDash([3 * dpr, 5 * dpr]); ctx.strokeStyle = 'rgba(255,255,255,.26)'; ctx.lineWidth = dpr;
+    line(X(0), Y(0), X(xMax), Y(xMax));
+    ctx.setLineDash([]);
+    ctx.strokeStyle = COL.real; ctx.lineWidth = 1.25 * dpr;
+    line(X(0), Y(0), X(R), Y(R));
+
+    const n = samples.length;
+    const stride = Math.max(1, Math.ceil(n / 2500));
+    const buildPath = key => {
+      const p = new Path2D(); let first = true;
+      for (let i = 0; i < n; i++){
+        const s = samples[i];
+        if ((i % stride) && !s.j && i !== n - 1) continue;
+        const x = X(s.r), y = Y(s[key]);
+        if (first){ p.moveTo(x, y); first = false; } else p.lineTo(x, y);
+      }
+      if (first) p.moveTo(X(R), Y({ r:R, t:T, c:C, d:D }[key])); else p.lineTo(X(R), Y({ r:R, t:T, c:C, d:D }[key]));
+      return p;
+    };
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = COL.troll; ctx.lineWidth = 1.25 * dpr; ctx.stroke(buildPath('d'));
+    ctx.strokeStyle = COL.target; ctx.lineWidth = 1.25 * dpr; ctx.stroke(buildPath('t'));
+    ctx.strokeStyle = COL.troll; ctx.lineWidth = 2 * dpr;
+    for (const j of jumps){ const x = X(j.r); line(x, Y(j.from), x, Y(j.to)); }
+    ctx.strokeStyle = COL.current; ctx.lineWidth = 2.25 * dpr; ctx.stroke(buildPath('c'));
+    for (const j of jumps) dot(X(j.r), Y(j.to), 2.2 * dpr, COL.troll);
+
+    const hx = X(R);
+    ctx.setLineDash([2 * dpr, 3 * dpr]); ctx.strokeStyle = 'rgba(255,196,107,.65)'; ctx.lineWidth = dpr;
+    line(hx, Y(R), hx, Y(C));
+    ctx.setLineDash([]);
+    dot(hx, Y(D), 3 * dpr, COL.troll);
+    dot(hx, Y(T), 3 * dpr, COL.target);
+    dot(hx, Y(R), 3 * dpr, COL.real);
+    dot(hx, Y(C), 4 * dpr, COL.current);
+    ctx.restore();
+
+    const label = signed(C - R, 's');
+    ctx.font = (11 * dpr) + 'px "IBM Plex Mono", monospace';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(label).width;
+    const ly = Math.min(padT + ph - 9 * dpr, Math.max(padT + 9 * dpr, (Y(R) + Y(C)) / 2));
+    let lx, bx;
+    if (hx - 10 * dpr - tw - 4 * dpr > padL){ ctx.textAlign = 'right'; lx = hx - 10 * dpr; bx = lx - tw - 4 * dpr; }
+    else { ctx.textAlign = 'left'; lx = hx + 10 * dpr; bx = lx - 4 * dpr; }
+    ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(bx, ly - 8 * dpr, tw + 8 * dpr, 16 * dpr);
+    ctx.fillStyle = COL.current; ctx.fillText(label, lx, ly);
+  }
+
+  if (window.ResizeObserver){
+    new ResizeObserver(() => { resizePlot(); if (face === 'gfx') drawGraph(performance.now()); }).observe(plot);
+    new ResizeObserver(() => { resizeWave(); if (face === 'tune') drawWave(performance.now()); }).observe(wave);
+  } else {
+    addEventListener('resize', () => { resizePlot(); resizeWave(); if (backVisible()) updateBacks(performance.now()); });
+  }
+
+  // ---------- boot ----------
+  resizePlot(); resizeWave();
+  syncPanel();
+  render(); paint(); ensureAmbient();
+})();
+</script>
+</body>
+</html>
