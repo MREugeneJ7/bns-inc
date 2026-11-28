@@ -209,6 +209,68 @@
     footer a:hover {
       border-bottom-color: var(--gold);
     }
+    .suggestions-section {
+      margin-top: 4.5rem;
+      padding-top: 3rem;
+      border-top: 1px solid var(--border);
+    }
+    .suggestions-header {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 2rem;
+    }
+    .suggestions-header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-style: italic;
+      margin: 0.75rem 0 1.5rem;
+    }
+    .suggestions-list {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .suggestion-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      text-decoration: none;
+      color: var(--ivory);
+      transition: border-color 0.2s ease;
+    }
+    .suggestion-item:hover {
+      border-color: var(--gold);
+    }
+    .suggestion-title {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      margin-bottom: 0.2rem;
+    }
+    .suggestion-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .suggestion-votes {
+      font-family: var(--serif);
+      font-size: 0.9rem;
+      color: var(--gold);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.75rem;
+      white-space: nowrap;
+    }
+    .suggestions-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -423,6 +485,26 @@
       </article>
 
     </div>
+
+    <section class="suggestions-section" aria-labelledby="suggestions-heading">
+      <div class="suggestions-header">
+        <h2 class="collection-title" id="suggestions-heading" style="margin-bottom: 0.6rem;">Le Cahier de Doléances — Suggestions</h2>
+        <p>
+          Give us your suggestion. Doesn’t mean I’ll actually build it—in fact, I probably won’t—but it’s hilarious to read. Vote with 👍 on GitHub.
+        </p>
+        <a
+          class="btn"
+          href="https://github.com/MREugeneJ7/bns-inc/issues/new?labels=suggestion&title=%5BN%C2%B0%20XX%5D%20My%20unhinged%20suggestion&body=**Which%20essence%3F**%20(e.g.%20N%C2%B0%2001%20Flappy-Pong%20or%20a%20new%20monstrosity)%0A%0A**The%20suggestion%3A**%0A%0A*(Disclaimer%3A%20I%20accept%20that%20this%20will%20probably%20never%20be%20implemented.)*"
+          target="_blank"
+          rel="noopener"
+        >
+          Give Us Your Suggestion
+        </a>
+      </div>
+      <div class="suggestions-list" id="suggestions-list">
+        <p class="suggestions-empty">Consulting the archives…</p>
+      </div>
+    </section>
   </main>
 
   <footer>
@@ -430,5 +512,73 @@
     <a href="https://addons.mozilla.org/es-ES/firefox/addon/arena-personal-rank/" target="_blank" rel="noopener">Arena Personal Rank</a>
     (Zero-telemetry Firefox extension)
   </footer>
+
+  <script>
+    (function () {
+      var listEl = document.getElementById("suggestions-list");
+      var apiUrl = "https://api.github.com/repos/MREugeneJ7/bns-inc/issues?labels=suggestion&state=open&per_page=30";
+
+      fetch(apiUrl, { headers: { Accept: "application/vnd.github+json" } })
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(function (issues) {
+          listEl.textContent = "";
+          var filtered = (issues || []).filter(function (it) { return !it.pull_request; });
+          if (!filtered.length) {
+            var empty = document.createElement("p");
+            empty.className = "suggestions-empty";
+            empty.textContent = "No open suggestions yet. Be the first to waste your breath.";
+            listEl.appendChild(empty);
+            return;
+          }
+
+          filtered.sort(function (a, b) {
+            var va = (a.reactions && a.reactions["+1"]) || 0;
+            var vb = (b.reactions && b.reactions["+1"]) || 0;
+            if (vb !== va) return vb - va;
+            return b.number - a.number;
+          });
+
+          filtered.forEach(function (issue) {
+            var item = document.createElement("a");
+            item.className = "suggestion-item";
+            item.href = issue.html_url;
+            item.target = "_blank";
+            item.rel = "noopener";
+
+            var left = document.createElement("div");
+            var title = document.createElement("div");
+            title.className = "suggestion-title";
+            title.textContent = issue.title;
+
+            var meta = document.createElement("div");
+            meta.className = "suggestion-meta";
+            var author = issue.user && issue.user.login ? issue.user.login : "anonymous";
+            meta.textContent = "#" + issue.number + " • by " + author + " • " + (issue.comments || 0) + " comments";
+
+            left.appendChild(title);
+            left.appendChild(meta);
+
+            var votes = document.createElement("div");
+            votes.className = "suggestion-votes";
+            var plusOne = (issue.reactions && issue.reactions["+1"]) || 0;
+            votes.textContent = "👍 " + plusOne;
+
+            item.appendChild(left);
+            item.appendChild(votes);
+            listEl.appendChild(item);
+          });
+        })
+        .catch(function () {
+          listEl.textContent = "";
+          var err = document.createElement("p");
+          err.className = "suggestions-empty";
+          err.textContent = "Could not load suggestions from GitHub right now.";
+          listEl.appendChild(err);
+        });
+    })();
+  </script>
 </body>
 </html>
